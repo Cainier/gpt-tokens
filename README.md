@@ -1,5 +1,7 @@
 # gpt-tokens
 
+[![TypeScript](https://img.shields.io/badge/TypeScript-Ready-blue.svg)](https://www.typescriptlang.org/)
+
 > GPT tokens / price Calculate
 
 ## Install
