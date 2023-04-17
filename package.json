@@ -1,0 +1,13 @@
+{
+    "name": "gpt-tokens",
+    "version": "1.0.0",
+    "description": "Calculate the token consumption and amount of openai gpt message",
+    "main": "index.ts",
+    "repository": "https://github.com/Cainier/gpt-tokens",
+    "author": "xingrong.dev@gmail.com",
+    "license": "MIT",
+    "dependencies": {
+        "@dqbd/tiktoken": "^1.0.6",
+        "decimal.js": "^10.4.3"
+    }
+}
