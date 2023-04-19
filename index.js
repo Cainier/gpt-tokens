@@ -62,21 +62,25 @@ class GPTTokens {
             'gpt-4',
             'gpt-4-0314',
         ].includes(this.model)) {
-            const promptUSD = new decimal_js_1.default(this.promptUsedTokens)
-                .mul(this.gpt4_8kPromptTokenUnit);
-            const completionUSD = new decimal_js_1.default(this.completionUsedTokens)
-                .mul(this.gpt4_8kCompletionTokenUnit);
-            return promptUSD.sub(completionUSD).toNumber();
+            // const promptUSD = new Decimal(this.promptUsedTokens)
+            //     .mul(this.gpt4_8kPromptTokenUnit)
+            // const completionUSD = new Decimal(this.completionUsedTokens)
+            //     .mul(this.gpt4_8kCompletionTokenUnit)
+            //
+            // return promptUSD.add(completionUSD).toNumber()
+            return new decimal_js_1.default(this.usedTokens).mul(new decimal_js_1.default(0.00003)).toNumber();
         }
         if ([
             'gpt-4-32k',
             'gpt-4-32k-0314',
         ].includes(this.model)) {
-            const promptUSD = new decimal_js_1.default(this.promptUsedTokens)
-                .mul(this.gpt4_32kPromptTokenUnit);
-            const completionUSD = new decimal_js_1.default(this.completionUsedTokens)
-                .mul(this.gpt4_32kCompletionTokenUnit);
-            return promptUSD.sub(completionUSD).toNumber();
+            // const promptUSD     = new Decimal(this.promptUsedTokens)
+            //     .mul(this.gpt4_32kPromptTokenUnit)
+            // const completionUSD = new Decimal(this.completionUsedTokens)
+            //     .mul(this.gpt4_32kCompletionTokenUnit)
+            //
+            // return promptUSD.add(completionUSD).toNumber()
+            return new decimal_js_1.default(this.usedTokens).mul(new decimal_js_1.default(0.00003)).toNumber();
         }
         throw new Error('Model not supported.');
     }
@@ -193,7 +197,33 @@ const test2 = new GPTTokens({
         },
     ],
 });
+const test3 = new GPTTokens({
+    model: 'gpt-4',
+    messages: [
+        {
+            role: 'assistant',
+            content: 'Hello for the fifth time! I\'m still here and ready to assist you with any questions or concerns you may have. Don\'t hesitate to ask!',
+        },
+        { role: 'user', content: 'hello 6' },
+        {
+            role: 'assistant',
+            content: 'Hello for the sixth time! I\'m still here, eager to help and answer any questions you may have. Just let me know how I can assist you.',
+        },
+        { role: 'user', content: 'hello 7' },
+        {
+            role: 'assistant',
+            content: 'Hello for the seventh time! I\'m still here and happy to help with any questions or concerns you may have. Please feel free to ask anything you\'d like.',
+        },
+        { role: 'user', content: 'hello 8' },
+        {
+            role: 'assistant',
+            content: 'Hello for the eighth time! I\'m still here and ready to assist you with any questions or information you may need. Don\'t hesitate to ask!',
+        },
+    ],
+});
 (0, assert_1.default)(test1.usedTokens === 18
     && test1.usedUSD === 0.000036
     && test2.usedTokens === 16
-    && test2.usedUSD === 0.00048, 'Error: TiktokenLite test failed');
+    && test2.usedUSD === 0.00048
+    && test3.usedTokens === 165
+    && test3.usedUSD === 0.00495, 'Error: TiktokenLite test failed');

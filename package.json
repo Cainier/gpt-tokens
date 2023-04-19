@@ -1,6 +1,6 @@
 {
     "name": "gpt-tokens",
-    "version": "1.0.2",
+    "version": "1.0.3",
     "description": "Calculate the token consumption and amount of openai gpt message",
     "keywords": [
         "gpt",
