@@ -1,6 +1,6 @@
 {
     "name": "gpt-tokens",
-    "version": "1.0.2",
+    "version": "1.0.3",
     "description": "Calculate the token consumption and amount of openai gpt message",
     "keywords": [
         "gpt",
@@ -13,7 +13,8 @@
         "amount"
     ],
     "scripts": {
-        "build": "tsc"
+        "build": "yarn && tsc",
+        "publish": "yarn build && npm publish"
     },
     "main": "index.js",
     "repository": "https://github.com/Cainier/gpt-tokens",
