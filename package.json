@@ -13,8 +13,7 @@
         "amount"
     ],
     "scripts": {
-        "build": "yarn && tsc",
-        "publish": "yarn build && npm publish"
+        "build": "yarn && tsc"
     },
     "main": "index.js",
     "repository": "https://github.com/Cainier/gpt-tokens",
