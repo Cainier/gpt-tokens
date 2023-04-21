@@ -9,7 +9,7 @@ import assert                                         from 'assert'
  */
 
 // The models supported
-type supportModelType =
+export type supportModelType =
     | 'gpt-3.5-turbo'
     | 'gpt-3.5-turbo-0301'
     | 'gpt-4'
