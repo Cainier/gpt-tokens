@@ -1,6 +1,6 @@
 {
     "name": "gpt-tokens",
-    "version": "1.0.4",
+    "version": "1.0.6",
     "description": "Calculate the token consumption and amount of openai gpt message",
     "keywords": [
         "gpt",
@@ -17,6 +17,8 @@
         "build": "yarn && tsc && yarn test"
     },
     "main": "index.js",
+    "types": "index.d.ts",
+    "module": "index.ts",
     "repository": "https://github.com/Cainier/gpt-tokens",
     "author": "Cainier <xingrong.dev@gmail.com>",
     "license": "MIT",
@@ -27,5 +29,11 @@
     "devDependencies": {
         "@types/node": "^12.20.0",
         "typescript": "^5.0.4"
-    }
+    },
+    "files": [
+        "index.ts",
+        "index.d.ts",
+        "index.js",
+        "test.js"
+    ]
 }
