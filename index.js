@@ -6,7 +6,6 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.GPTTokens = void 0;
 const tiktoken_1 = require("@dqbd/tiktoken");
 const decimal_js_1 = __importDefault(require("decimal.js"));
-const assert_1 = __importDefault(require("assert"));
 class GPTTokens {
     constructor(options) {
         // https://openai.com/pricing/
@@ -16,11 +15,12 @@ class GPTTokens {
         // https://openai.com/pricing/
         // gpt-4-8k
         // Prompt: $0.03 / 1K tokens
+        //
         this.gpt4_8kPromptTokenUnit = new decimal_js_1.default(0.03).div(1000).toNumber();
         // https://openai.com/pricing/
         // gpt-4-8k
         // Completion: $0.06 / 1K tokens
-        this.gpt4_8kCompletionTokenUnit = new decimal_js_1.default(0.06).div(1000).toNumber();
+        // public readonly gpt4_8kCompletionTokenUnit = new Decimal(0.06).div(1000).toNumber()
         // https://openai.com/pricing/
         // gpt-4-32k
         // Prompt: $0.06 / 1K tokens
@@ -28,7 +28,7 @@ class GPTTokens {
         // https://openai.com/pricing/
         // gpt-4-32k
         // Completion: $0.12 / 1K tokens
-        this.gpt4_32kCompletionTokenUnit = new decimal_js_1.default(0.12).div(1000).toNumber();
+        // public readonly gpt4_32kCompletionTokenUnit = new Decimal(0.12).div(1000).toNumber()
         // The models supported
         this.supportModels = [
             'gpt-3.5-turbo',
@@ -62,36 +62,43 @@ class GPTTokens {
             'gpt-4',
             'gpt-4-0314',
         ].includes(this.model)) {
+            // Does not distinguish between Prompt and Completion for the time being
+            //
             // const promptUSD = new Decimal(this.promptUsedTokens)
             //     .mul(this.gpt4_8kPromptTokenUnit)
             // const completionUSD = new Decimal(this.completionUsedTokens)
             //     .mul(this.gpt4_8kCompletionTokenUnit)
             //
             // return promptUSD.add(completionUSD).toNumber()
-            return new decimal_js_1.default(this.usedTokens).mul(new decimal_js_1.default(0.00003)).toNumber();
+            return new decimal_js_1.default(this.usedTokens).mul(new decimal_js_1.default(this.gpt4_8kPromptTokenUnit)).toNumber();
         }
         if ([
             'gpt-4-32k',
             'gpt-4-32k-0314',
         ].includes(this.model)) {
+            // Does not distinguish between Prompt and Completion for the time being
+            //
             // const promptUSD     = new Decimal(this.promptUsedTokens)
             //     .mul(this.gpt4_32kPromptTokenUnit)
             // const completionUSD = new Decimal(this.completionUsedTokens)
             //     .mul(this.gpt4_32kCompletionTokenUnit)
             //
             // return promptUSD.add(completionUSD).toNumber()
-            return new decimal_js_1.default(this.usedTokens).mul(new decimal_js_1.default(0.00003)).toNumber();
+            return new decimal_js_1.default(this.usedTokens).mul(new decimal_js_1.default(this.gpt4_32kPromptTokenUnit)).toNumber();
         }
         throw new Error('Model not supported.');
     }
-    get promptUsedTokens() {
-        const messages = this.messages.filter(item => item.role !== 'assistant');
-        return this.num_tokens_from_messages(messages, this.model);
-    }
-    get completionUsedTokens() {
-        const messages = this.messages.filter(item => item.role === 'assistant');
-        return this.num_tokens_from_messages(messages, this.model) - 3;
-    }
+    // private get promptUsedTokens (): number {
+    //     const messages = this.messages.filter(item => item.role !== 'assistant')
+    //
+    //     return this.num_tokens_from_messages(messages, this.model)
+    // }
+    //
+    // private get completionUsedTokens (): number {
+    //     const messages = this.messages.filter(item => item.role === 'assistant')
+    //
+    //     return this.num_tokens_from_messages(messages, this.model) - 3
+    // }
     /**
      * Print a warning message.
      * @param message The message to print. Will be prefixed with "Warning: ".
@@ -171,59 +178,3 @@ class GPTTokens {
     }
 }
 exports.GPTTokens = GPTTokens;
-const test1 = new GPTTokens({
-    model: 'gpt-3.5-turbo',
-    messages: [
-        {
-            'role': 'system',
-            'content': 'You are a helpful assistant',
-        },
-        {
-            'role': 'user',
-            'content': '',
-        },
-    ],
-});
-const test2 = new GPTTokens({
-    model: 'gpt-4',
-    messages: [
-        {
-            'role': 'system',
-            'content': 'You are a helpful assistant',
-        },
-        {
-            'role': 'user',
-            'content': '',
-        },
-    ],
-});
-const test3 = new GPTTokens({
-    model: 'gpt-4',
-    messages: [
-        {
-            role: 'assistant',
-            content: 'Hello for the fifth time! I\'m still here and ready to assist you with any questions or concerns you may have. Don\'t hesitate to ask!',
-        },
-        { role: 'user', content: 'hello 6' },
-        {
-            role: 'assistant',
-            content: 'Hello for the sixth time! I\'m still here, eager to help and answer any questions you may have. Just let me know how I can assist you.',
-        },
-        { role: 'user', content: 'hello 7' },
-        {
-            role: 'assistant',
-            content: 'Hello for the seventh time! I\'m still here and happy to help with any questions or concerns you may have. Please feel free to ask anything you\'d like.',
-        },
-        { role: 'user', content: 'hello 8' },
-        {
-            role: 'assistant',
-            content: 'Hello for the eighth time! I\'m still here and ready to assist you with any questions or information you may need. Don\'t hesitate to ask!',
-        },
-    ],
-});
-(0, assert_1.default)(test1.usedTokens === 18
-    && test1.usedUSD === 0.000036
-    && test2.usedTokens === 16
-    && test2.usedUSD === 0.00048
-    && test3.usedTokens === 165
-    && test3.usedUSD === 0.00495, 'Error: TiktokenLite test failed');

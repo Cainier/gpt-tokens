@@ -51,6 +51,24 @@ You can test in [Tiktokenizer](https://tiktokenizer.vercel.app/)
 * gpt-4-32k
 * gpt-4-32k-0314
 
+## For web
+
+If use vite, you need do this in `vite.config.js`
+
+```javascript
+import wasm             from 'vite-plugin-wasm'
+import topLevelAwait    from 'vite-plugin-top-level-await'
+import { defineConfig } from 'vite'
+
+export default defineConfig({
+    plugins: [wasm(), topLevelAwait()],
+})
+```
+
+## Compatibility
+
+As the dependency @dqbd/tiktoken is a WASM library, you can find the compatibility methods in the [NPM Readme of @dqbd/titoken.](https://www.npmjs.com/package/@dqbd/tiktoken#compatibility)
+
 ## Dependencies
 
 - OpenAI tiktoken (Python lib) [openai/tiktoken](https://github.com/openai/tiktoken)
