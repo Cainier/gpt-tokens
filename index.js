@@ -117,17 +117,6 @@ class GPTTokens {
      * @throws If the model is not supported.
      */
     num_tokens_from_messages(messages, model) {
-        let encoding;
-        let tokens_per_message;
-        let tokens_per_name;
-        let num_tokens = 0;
-        try {
-            encoding = (0, tiktoken_1.encoding_for_model)(model);
-        }
-        catch (e) {
-            this.warning('model not found. Using cl100k_base encoding.');
-            encoding = (0, tiktoken_1.get_encoding)('cl100k_base');
-        }
         if (model === 'gpt-3.5-turbo') {
             this.warning('gpt-3.5-turbo may change over time. Returning num tokens assuming gpt-3.5-turbo-0301.');
             return this.num_tokens_from_messages(messages, 'gpt-3.5-turbo-0301');
@@ -153,6 +142,17 @@ class GPTTokens {
              */
             this.warning('gpt-4-32k may change over time. Returning num tokens assuming gpt-4-32k-0314.');
             return this.num_tokens_from_messages(messages, 'gpt-4-32k-0314');
+        }
+        let encoding;
+        let tokens_per_message;
+        let tokens_per_name;
+        let num_tokens = 0;
+        try {
+            encoding = (0, tiktoken_1.encoding_for_model)(model);
+        }
+        catch (e) {
+            this.warning('model not found. Using cl100k_base encoding.');
+            encoding = (0, tiktoken_1.get_encoding)('cl100k_base');
         }
         if (model === 'gpt-3.5-turbo-0301') {
             tokens_per_message = 4;

@@ -169,19 +169,6 @@ export class GPTTokens {
      * @throws If the model is not supported.
      */
     private num_tokens_from_messages (messages: MessageItem [], model: supportModelType): number {
-        let encoding!: Tiktoken
-        let tokens_per_message!: number
-        let tokens_per_name !: number
-        let num_tokens = 0
-
-        try {
-            encoding = encoding_for_model(model)
-        } catch (e) {
-            this.warning('model not found. Using cl100k_base encoding.')
-
-            encoding = get_encoding('cl100k_base')
-        }
-
         if (model === 'gpt-3.5-turbo') {
             this.warning('gpt-3.5-turbo may change over time. Returning num tokens assuming gpt-3.5-turbo-0301.')
 
@@ -212,6 +199,19 @@ export class GPTTokens {
             this.warning('gpt-4-32k may change over time. Returning num tokens assuming gpt-4-32k-0314.')
 
             return this.num_tokens_from_messages(messages, 'gpt-4-32k-0314')
+        }
+
+        let encoding!: Tiktoken
+        let tokens_per_message!: number
+        let tokens_per_name !: number
+        let num_tokens = 0
+
+        try {
+            encoding = encoding_for_model(model)
+        } catch (e) {
+            this.warning('model not found. Using cl100k_base encoding.')
+
+            encoding = get_encoding('cl100k_base')
         }
 
         if (model === 'gpt-3.5-turbo-0301') {
