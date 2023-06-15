@@ -37,20 +37,7 @@ class GPTTokens {
         // gpt-4-32k
         // Completion: $0.12 / 1K tokens
         this.gpt4_32kCompletionTokenUnit = new decimal_js_1.default(0.12).div(1000).toNumber();
-        // The models supported
-        this.supportModels = [
-            'gpt-3.5-turbo',
-            'gpt-3.5-turbo-0301',
-            'gpt-3.5-turbo-0613',
-            'gpt-3.5-turbo-16k',
-            'gpt-4',
-            'gpt-4-0314',
-            'gpt-4-32k',
-            'gpt-4-32k-0314',
-        ];
         const { debug = false, model, messages, plus = false, } = options;
-        if (!this.supportModels.includes(model))
-            throw new Error('Model not supported.');
         this.debug = debug;
         this.model = model;
         this.plus = plus;
@@ -62,17 +49,20 @@ class GPTTokens {
             'gpt-3.5-turbo-0301',
             'gpt-3.5-turbo-0613',
             'gpt-3.5-turbo-16k',
+            'gpt-3.5-turbo-16k-0613',
         ].includes(this.model))
             return 'gpt-3.5-turbo';
         if ([
             'gpt-4',
             'gpt-4-0314',
+            'gpt-4-0613',
         ].includes(this.model)) {
             return 'gpt-4';
         }
         if ([
             'gpt-4-32k',
             'gpt-4-32k-0314',
+            'gpt-4-32k-0613',
         ].includes(this.model)) {
             return 'gpt-4-32k';
         }
@@ -88,12 +78,14 @@ class GPTTokens {
         if ([
             'gpt-3.5-turbo',
             'gpt-3.5-turbo-0301',
+            'gpt-3.5-turbo-0613',
         ].includes(this.model))
             price = new decimal_js_1.default(this.usedTokens)
                 .mul(this.gpt3_5_turboTokenUnit)
                 .toNumber();
         if ([
             'gpt-3.5-turbo-16k',
+            'gpt-3.5-turbo-16k-0613',
         ].includes(this.model)) {
             const promptUSD = new decimal_js_1.default(this.promptUsedTokens)
                 .mul(this.gpt3_5_turbo_16kPromptTokenUnit);
@@ -104,6 +96,7 @@ class GPTTokens {
         if ([
             'gpt-4',
             'gpt-4-0314',
+            'gpt-4-0613',
         ].includes(this.model)) {
             const promptUSD = new decimal_js_1.default(this.promptUsedTokens)
                 .mul(this.gpt4_8kPromptTokenUnit);
@@ -114,6 +107,7 @@ class GPTTokens {
         if ([
             'gpt-4-32k',
             'gpt-4-32k-0314',
+            'gpt-4-32k-0613',
         ].includes(this.model)) {
             const promptUSD = new decimal_js_1.default(this.promptUsedTokens)
                 .mul(this.gpt4_32kPromptTokenUnit);
@@ -121,8 +115,17 @@ class GPTTokens {
                 .mul(this.gpt4_32kCompletionTokenUnit);
             price = promptUSD.add(completionUSD).toNumber();
         }
-        if (this.plus && this.modelType === 'gpt-3.5-turbo')
-            price = new decimal_js_1.default(price).mul(0.75).toNumber();
+        if (this.plus) {
+            if ([
+                'gpt-3.5-turbo',
+                'gpt-3.5-turbo-0301',
+                'gpt-3.5-turbo-0613',
+                'gpt-3.5-turbo-16k',
+                'gpt-3.5-turbo-16k-0613',
+            ].includes(this.model)) {
+                price = new decimal_js_1.default(price).mul(0.75).toNumber();
+            }
+        }
         return price;
     }
     get promptUsedTokens() {
@@ -155,31 +158,32 @@ class GPTTokens {
         let tokens_per_message;
         let tokens_per_name;
         let num_tokens = 0;
+        let modelType;
         if ([
             'gpt-3.5-turbo',
             'gpt-3.5-turbo-0301',
             'gpt-3.5-turbo-0613',
             'gpt-3.5-turbo-16k',
+            'gpt-3.5-turbo-16k-0613',
         ].includes(model)) {
+            modelType = 'gpt-3.5-turbo';
             tokens_per_message = 4;
             tokens_per_name = -1;
         }
         if ([
             'gpt-4',
             'gpt-4-0314',
-        ].includes(model)) {
-            tokens_per_message = 3;
-            tokens_per_name = 1;
-        }
-        if ([
+            'gpt-4-0613',
             'gpt-4-32k',
             'gpt-4-32k-0314',
+            'gpt-4-32k-0613',
         ].includes(model)) {
+            modelType = 'gpt-4';
             tokens_per_message = 3;
             tokens_per_name = 1;
         }
         try {
-            encoding = (0, tiktoken_1.encoding_for_model)(this.modelType);
+            encoding = (0, tiktoken_1.encoding_for_model)(modelType);
         }
         catch (e) {
             this.warning('model not found. Using cl100k_base encoding.');
