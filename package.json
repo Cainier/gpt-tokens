@@ -1,6 +1,6 @@
 {
     "name": "gpt-tokens",
-    "version": "1.0.9",
+    "version": "1.0.10",
     "description": "Calculate the token consumption and amount of openai gpt message",
     "keywords": [
         "gpt",
@@ -23,8 +23,8 @@
     "author": "Cainier <xingrong.dev@gmail.com>",
     "license": "MIT",
     "dependencies": {
-        "@dqbd/tiktoken": "^1.0.6",
-        "decimal.js": "^10.4.3"
+        "decimal.js": "^10.4.3",
+        "js-tiktoken": "^1.0.7"
     },
     "devDependencies": {
         "@types/node": "^12.20.0",
