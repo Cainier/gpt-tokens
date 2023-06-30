@@ -13,13 +13,11 @@ export declare class GPTTokens {
     constructor(options: {
         model: supportModelType;
         messages: MessageItem[];
-        debug?: boolean;
         plus?: boolean;
     });
     readonly plus: boolean;
     readonly model: supportModelType;
     readonly messages: MessageItem[];
-    private readonly debug;
     readonly gpt3_5_turboTokenUnit: number;
     readonly gpt3_5_turbo_16kPromptTokenUnit: number;
     readonly gpt3_5_turbo_16kCompletionTokenUnit: number;
@@ -27,7 +25,6 @@ export declare class GPTTokens {
     readonly gpt4_8kCompletionTokenUnit: number;
     readonly gpt4_32kPromptTokenUnit: number;
     readonly gpt4_32kCompletionTokenUnit: number;
-    private get modelType();
     get usedTokens(): number;
     get usedUSD(): number;
     private get promptUsedTokens();

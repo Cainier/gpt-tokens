@@ -4,7 +4,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.GPTTokens = void 0;
-const tiktoken_1 = require("@dqbd/tiktoken");
+const js_tiktoken_1 = require("js-tiktoken");
 const decimal_js_1 = __importDefault(require("decimal.js"));
 class GPTTokens {
     constructor(options) {
@@ -37,36 +37,18 @@ class GPTTokens {
         // gpt-4-32k
         // Completion: $0.12 / 1K tokens
         this.gpt4_32kCompletionTokenUnit = new decimal_js_1.default(0.12).div(1000).toNumber();
-        const { debug = false, model, messages, plus = false, } = options;
-        this.debug = debug;
+        const { model, messages, plus = false, } = options;
+        if (model === 'gpt-3.5-turbo')
+            this.warning(`${model} may update over time. Returning num tokens assuming gpt-3.5-turbo-0613`);
+        if (model === 'gpt-3.5-turbo-16k')
+            this.warning(`${model} may update over time. Returning num tokens assuming gpt-3.5-turbo-16k-0613`);
+        if (model === 'gpt-4')
+            this.warning(`${model} may update over time. Returning num tokens assuming gpt-4-0613`);
+        if (model === 'gpt-4-32k')
+            this.warning(`${model} may update over time. Returning num tokens assuming gpt-4-32k-0613`);
         this.model = model;
         this.plus = plus;
         this.messages = messages;
-    }
-    get modelType() {
-        if ([
-            'gpt-3.5-turbo',
-            'gpt-3.5-turbo-0301',
-            'gpt-3.5-turbo-0613',
-            'gpt-3.5-turbo-16k',
-            'gpt-3.5-turbo-16k-0613',
-        ].includes(this.model))
-            return 'gpt-3.5-turbo';
-        if ([
-            'gpt-4',
-            'gpt-4-0314',
-            'gpt-4-0613',
-        ].includes(this.model)) {
-            return 'gpt-4';
-        }
-        if ([
-            'gpt-4-32k',
-            'gpt-4-32k-0314',
-            'gpt-4-32k-0613',
-        ].includes(this.model)) {
-            return 'gpt-4-32k';
-        }
-        throw new Error('Model not supported.');
     }
     // Used Tokens
     get usedTokens() {
@@ -115,18 +97,9 @@ class GPTTokens {
                 .mul(this.gpt4_32kCompletionTokenUnit);
             price = promptUSD.add(completionUSD).toNumber();
         }
-        if (this.plus) {
-            if ([
-                'gpt-3.5-turbo',
-                'gpt-3.5-turbo-0301',
-                'gpt-3.5-turbo-0613',
-                'gpt-3.5-turbo-16k',
-                'gpt-3.5-turbo-16k-0613',
-            ].includes(this.model)) {
-                price = new decimal_js_1.default(price).mul(0.75).toNumber();
-            }
-        }
-        return price;
+        return this.plus && this.model.startsWith('gpt-3.5-turbo')
+            ? new decimal_js_1.default(price).mul(0.75).toNumber()
+            : price;
     }
     get promptUsedTokens() {
         const messages = this.messages.filter(item => item.role !== 'assistant');
@@ -142,8 +115,6 @@ class GPTTokens {
      * @returns void
      */
     warning(message) {
-        if (!this.debug)
-            return;
         console.warn('Warning:', message);
     }
     /**
@@ -158,19 +129,17 @@ class GPTTokens {
         let tokens_per_message;
         let tokens_per_name;
         let num_tokens = 0;
-        let modelType;
         if ([
-            'gpt-3.5-turbo',
             'gpt-3.5-turbo-0301',
-            'gpt-3.5-turbo-0613',
-            'gpt-3.5-turbo-16k',
-            'gpt-3.5-turbo-16k-0613',
         ].includes(model)) {
-            modelType = 'gpt-3.5-turbo';
             tokens_per_message = 4;
             tokens_per_name = -1;
         }
         if ([
+            'gpt-3.5-turbo',
+            'gpt-3.5-turbo-0613',
+            'gpt-3.5-turbo-16k',
+            'gpt-3.5-turbo-16k-0613',
             'gpt-4',
             'gpt-4-0314',
             'gpt-4-0613',
@@ -178,16 +147,15 @@ class GPTTokens {
             'gpt-4-32k-0314',
             'gpt-4-32k-0613',
         ].includes(model)) {
-            modelType = 'gpt-4';
             tokens_per_message = 3;
             tokens_per_name = 1;
         }
         try {
-            encoding = (0, tiktoken_1.encoding_for_model)(modelType);
+            encoding = (0, js_tiktoken_1.encodingForModel)(model);
         }
         catch (e) {
             this.warning('model not found. Using cl100k_base encoding.');
-            encoding = (0, tiktoken_1.get_encoding)('cl100k_base');
+            encoding = (0, js_tiktoken_1.getEncoding)('cl100k_base');
         }
         // Python 2 Typescript by gpt-4
         for (const message of messages) {
@@ -200,7 +168,8 @@ class GPTTokens {
             }
         }
         // Supplementary
-        encoding.free();
+        // encoding.free()
+        // every reply is primed with <|start|>assistant<|message|>
         return num_tokens + 3;
     }
 }
