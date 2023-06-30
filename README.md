@@ -21,31 +21,48 @@ import { GPTTokens } from 'gpt-tokens'
 const usageInfo = new GPTTokens({
     // Plus enjoy a 25% cost reduction for input tokens on GPT-3.5 Turbo (0.0015 per 1K input tokens)
     plus    : false,
-    model   : 'gpt-3.5-turbo',
+    model   : 'gpt-3.5-turbo-0301',
     messages: [
         {
             'role'   : 'system',
-            'content': 'You are a helpful assistant',
+            'content': 'You are a helpful, pattern-following assistant that translates corporate jargon into plain English.',
+        },
+        {
+            'role'   : 'system',
+            'name'   : 'example_user',
+            'content': 'New synergies will help drive top-line growth.',
+        },
+        {
+            'role'   : 'system',
+            'name'   : 'example_assistant',
+            'content': 'Things working well together will increase revenue.',
+        },
+        {
+            'role'   : 'system',
+            'name'   : 'example_user',
+            'content': 'Let\'s circle back when we have more bandwidth to touch base on opportunities for increased leverage.',
+        },
+        {
+            'role'   : 'system',
+            'name'   : 'example_assistant',
+            'content': 'Let\'s talk later when we\'re less busy about how to do better.',
         },
         {
             'role'   : 'user',
-            'content': '',
+            'content': 'This late pivot means we don\'t have time to boil the ocean for the client deliverable.',
         },
     ]
 })
 
-// Tokens: 18
+// Tokens: 127
 console.log('Tokens:', usageInfo.usedTokens)
-// Price USD: 0.000036
+// Price USD: 0.000254
 console.log('Price USD: ', usageInfo.usedUSD)
 ```
 
-You can test in [Tiktokenizer](https://tiktokenizer.vercel.app/)
+Verify the function above in [openai-cookbook](https://github.com/openai/openai-cookbook/blob/main/examples/How_to_count_tokens_with_tiktoken.ipynb)
 
-* All tokens calculation is consistent
-* The USD calculation of gpt-4 series models is inconsistent (Tiktokenizer does not distinguish between Prompt and Completion fees)
-
-![img.png](Tiktokenizer.png)
+![openai-cookbook.png](openai-cookbook.png)
 
 ## Support Models
 
@@ -61,25 +78,6 @@ You can test in [Tiktokenizer](https://tiktokenizer.vercel.app/)
 * gpt-4-32k-0314
 * gpt-4-32k-0613
 
-## For web
-
-If you use vite, need do this in `vite.config.js`
-
-```javascript
-import wasm             from 'vite-plugin-wasm'
-import topLevelAwait    from 'vite-plugin-top-level-await'
-import { defineConfig } from 'vite'
-
-export default defineConfig({
-    plugins: [wasm(), topLevelAwait()],
-})
-```
-
-## Compatibility
-
-As the dependency @dqbd/tiktoken is a WASM library, you can find the compatibility methods in the [NPM Readme of @dqbd/titoken.](https://www.npmjs.com/package/@dqbd/tiktoken#compatibility)
-
 ## Dependencies
 
-- OpenAI tiktoken (Python lib) [openai/tiktoken](https://github.com/openai/tiktoken)
-- @dqbd/titoken (Typescript)  [dqbd/tiktoken](https://github.com/dqbd/tiktoken)
+- [js-tiktoken](https://github.com/dqbd/tiktoken)
