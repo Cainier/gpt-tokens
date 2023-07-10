@@ -38,6 +38,8 @@ export class GPTTokens {
                   plus = false,
               } = options
 
+        if (!GPTTokens.supportModels.includes(model)) throw new Error(`Model ${model} is not supported`)
+
         if (model === 'gpt-3.5-turbo')
             this.warning(`${model} may update over time. Returning num tokens assuming gpt-3.5-turbo-0613`)
         if (model === 'gpt-3.5-turbo-16k')
@@ -51,6 +53,20 @@ export class GPTTokens {
         this.plus     = plus
         this.messages = messages
     }
+
+    public static readonly supportModels: supportModelType [] = [
+        'gpt-3.5-turbo-0301',
+        'gpt-3.5-turbo',
+        'gpt-3.5-turbo-0613',
+        'gpt-3.5-turbo-16k',
+        'gpt-3.5-turbo-16k-0613',
+        'gpt-4',
+        'gpt-4-0314',
+        'gpt-4-0613',
+        'gpt-4-32k',
+        'gpt-4-32k-0314',
+        'gpt-4-32k-0613',
+    ]
 
     public readonly plus
     public readonly model
@@ -91,11 +107,6 @@ export class GPTTokens {
     // gpt-4-32k
     // Completion: $0.12 / 1K tokens
     public readonly gpt4_32kCompletionTokenUnit = new Decimal(0.12).div(1000).toNumber()
-
-    // Used Tokens
-    public get usedTokens () {
-        return this.num_tokens_from_messages(this.messages, this.model)
-    }
 
     // Used USD
     public get usedUSD (): number {
@@ -152,16 +163,49 @@ export class GPTTokens {
             : price
     }
 
-    private get promptUsedTokens () {
-        const messages = this.messages.filter(item => item.role !== 'assistant')
-
-        return this.num_tokens_from_messages(messages, this.model)
+    // Used Tokens (total)
+    public get usedTokens () {
+        return this.promptUsedTokens + this.completionUsedTokens
     }
 
-    private get completionUsedTokens () {
-        const messages = this.messages.filter(item => item.role === 'assistant')
+    // Used Tokens (prompt
+    public get promptUsedTokens () {
+        return GPTTokens.num_tokens_from_messages(this.promptMessages, this.model)
+    }
 
-        return this.num_tokens_from_messages(messages, this.model)
+    // Used Tokens (completion)
+    public get completionUsedTokens () {
+        return this.completionMessage
+            ? GPTTokens.contentUsedTokens(this.model, this.completionMessage)
+            : 0
+    }
+
+    public static contentUsedTokens (model: supportModelType, content: string) {
+        let encoding!: Tiktoken
+
+        try {
+            encoding = encodingForModel(model)
+        } catch (e) {
+            console.info('model not found. Using cl100k_base encoding.')
+
+            encoding = getEncoding('cl100k_base')
+        }
+
+        return encoding.encode(content).length
+    }
+
+    private get lastMessage () {
+        return this.messages[this.messages.length - 1]
+    }
+
+    private get promptMessages () {
+        return this.lastMessage.role === 'assistant' ? this.messages.slice(0, -1) : this.messages
+    }
+
+    private get completionMessage () {
+        return this.lastMessage.role === 'assistant'
+            ? this.lastMessage.content
+            : ''
     }
 
     /**
@@ -180,7 +224,7 @@ export class GPTTokens {
      * @returns The number of tokens in the messages.
      * @throws If the model is not supported.
      */
-    private num_tokens_from_messages (messages: MessageItem [], model: supportModelType) {
+    private static num_tokens_from_messages (messages: MessageItem [], model: supportModelType) {
         let encoding!: Tiktoken
         let tokens_per_message!: number
         let tokens_per_name !: number
@@ -212,7 +256,7 @@ export class GPTTokens {
         try {
             encoding = encodingForModel(model)
         } catch (e) {
-            this.warning('model not found. Using cl100k_base encoding.')
+            console.info('model not found. Using cl100k_base encoding.')
 
             encoding = getEncoding('cl100k_base')
         }
@@ -233,4 +277,59 @@ export class GPTTokens {
         // every reply is primed with <|start|>assistant<|message|>
         return num_tokens + 3
     }
+}
+
+export async function testGPTTokens (apiKey: string) {
+    const { Configuration, OpenAIApi } = await import('openai')
+
+    const configuration            = new Configuration({ apiKey })
+    const openai                   = new OpenAIApi(configuration)
+    const messages: MessageItem [] = [
+        { role: 'user', content: 'Hello, how are u' },
+    ]
+    const { length: modelsNum }    = GPTTokens.supportModels
+
+    for (let i = 0; i < modelsNum; i += 1) {
+        const model = GPTTokens.supportModels[i]
+
+        console.info(`[${i + 1}/${modelsNum}]: Testing ${model}...`)
+
+        let ignoreModel = false
+
+        const chatCompletion = await openai.createChatCompletion({
+            model,
+            messages,
+        })
+            .catch(err => {
+                ignoreModel = true
+
+                console.info(`Ignore model ${model}:`, err.message)
+            })
+
+        if (ignoreModel) continue
+
+        const responseMessage = chatCompletion!.data.choices[0].message!
+        const openaiUsage     = chatCompletion!.data.usage!
+
+        const gptTokens = new GPTTokens({
+            model,
+            messages: [
+                ...messages,
+                ...[responseMessage],
+            ] as MessageItem [],
+        })
+
+        if (gptTokens.usedTokens !== openaiUsage?.total_tokens)
+            throw new Error(`Test ${model} usedTokens failed (openai: ${openaiUsage.total_tokens}/ gpt-tokens: ${gptTokens.usedTokens})`)
+
+        if (gptTokens.promptUsedTokens !== openaiUsage.prompt_tokens)
+            throw new Error(`Test ${model} promptUsedTokens failed (openai: ${openaiUsage.prompt_tokens}/ gpt-tokens: ${gptTokens.promptUsedTokens})`)
+
+        if (gptTokens.completionUsedTokens !== openaiUsage.completion_tokens)
+            throw new Error(`Test ${model} completionUsedTokens failed (openai: ${openaiUsage.completion_tokens}/ gpt-tokens: ${gptTokens.completionUsedTokens})`)
+
+        console.info('Pass!')
+    }
+
+    console.info('Test success!')
 }

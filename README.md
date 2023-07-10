@@ -21,7 +21,7 @@ import { GPTTokens } from 'gpt-tokens'
 const usageInfo = new GPTTokens({
     // Plus enjoy a 25% cost reduction for input tokens on GPT-3.5 Turbo (0.0015 per 1K input tokens)
     plus    : false,
-    model   : 'gpt-3.5-turbo-0301',
+    model   : 'gpt-3.5-turbo-0613',
     messages: [
         {
             'role'   : 'system',
@@ -51,14 +51,35 @@ const usageInfo = new GPTTokens({
             'role'   : 'user',
             'content': 'This late pivot means we don\'t have time to boil the ocean for the client deliverable.',
         },
+        {
+            'role'   : 'assistant',
+            'content': 'This last-minute change means we don\'t have enough time to complete the entire project for the client.',
+        },
     ]
 })
 
-// Tokens: 127
-console.log('Tokens:', usageInfo.usedTokens)
-// Price USD: 0.000254
+// ┌───────────────────┬────────┐
+// │      (index)      │ Values │
+// ├───────────────────┼────────┤
+// │   Tokens prompt   │  129   │
+// │ Tokens completion │   20   │
+// │   Tokens total    │  149   │
+// └───────────────────┴────────┘
+console.table({
+    'Tokens prompt'    : usageInfo.promptUsedTokens,
+    'Tokens completion': usageInfo.completionUsedTokens,
+    'Tokens total'     : usageInfo.usedTokens,
+})
+
+// Price USD:  0.000298
 console.log('Price USD: ', usageInfo.usedUSD)
 ```
+
+> Tokens calculation rules for prompt and completion:
+>
+> If the role of the last element of messages is not assistant, the entire messages will be regarded as a prompt, and **all content** will participate in the calculation of tokens
+>
+> If the role of the last element of messages is assistant, the last message is regarded as the completion returned by openai, and **only the 'content' content** in the completion participates in the calculation of tokens
 
 Verify the function above in [openai-cookbook](https://github.com/openai/openai-cookbook/blob/main/examples/How_to_count_tokens_with_tiktoken.ipynb)
 
@@ -77,6 +98,42 @@ Verify the function above in [openai-cookbook](https://github.com/openai/openai-
 * gpt-4-32k
 * gpt-4-32k-0314
 * gpt-4-32k-0613
+
+Test in your project
+
+```typescript
+import { testGPTTokens } from 'gpt-tokens'
+
+testGPTTokens('Your openai apiKey').then()
+
+// [1/11]: Testing gpt-3.5-turbo-0301...
+// Pass!
+// [2/11]: Testing gpt-3.5-turbo...
+// Warning: gpt-3.5-turbo may update over time. Returning num tokens assuming gpt-3.5-turbo-0613
+// Pass!
+// [3/11]: Testing gpt-3.5-turbo-0613...
+// Pass!
+// [4/11]: Testing gpt-3.5-turbo-16k...
+// Warning: gpt-3.5-turbo-16k may update over time. Returning num tokens assuming gpt-3.5-turbo-16k-0613
+// Pass!
+// [5/11]: Testing gpt-3.5-turbo-16k-0613...
+// Pass!
+// [6/11]: Testing gpt-4...
+// Warning: gpt-4 may update over time. Returning num tokens assuming gpt-4-0613
+// Pass!
+// [7/11]: Testing gpt-4-0314...
+// Pass!
+// [8/11]: Testing gpt-4-0613...
+// Pass!
+// [9/11]: Testing gpt-4-32k...
+// Ignore model gpt-4-32k: Request failed with status code 404
+// [10/11]: Testing gpt-4-32k-0314...
+// Ignore model gpt-4-32k-0314: Request failed with status code 404
+// [11/11]: Testing gpt-4-32k-0613...
+// Ignore model gpt-4-32k-0613: Request failed with status code 404
+// Test success!
+// ✨  Done in 27.13s.
+```
 
 ## Dependencies
 
