@@ -22,7 +22,7 @@ export type supportModelType =
 
 interface MessageItem {
     name?: string
-    role: 'system' | 'user' | 'assistant'
+    role: 'system' | 'user' | 'assistant' | 'function'
     content: string
 }
 
@@ -31,11 +31,17 @@ export class GPTTokens {
         model: supportModelType
         messages: MessageItem []
         plus?: boolean
+        functions?: {
+            name: string
+            description?: string
+            parameters?: { [key: string]: any; }
+        } []
     }) {
         const {
                   model,
                   messages,
-                  plus = false,
+                  plus      = false,
+                  functions = [],
               } = options
 
         if (!GPTTokens.supportModels.includes(model)) throw new Error(`Model ${model} is not supported`)
@@ -49,9 +55,10 @@ export class GPTTokens {
         if (model === 'gpt-4-32k')
             this.warning(`${model} may update over time. Returning num tokens assuming gpt-4-32k-0613`)
 
-        this.model    = model
-        this.plus     = plus
-        this.messages = messages
+        this.model     = model
+        this.plus      = plus
+        this.messages  = messages
+        this.functions = functions
     }
 
     public static readonly supportModels: supportModelType [] = [
@@ -71,6 +78,7 @@ export class GPTTokens {
     public readonly plus
     public readonly model
     public readonly messages
+    public readonly functions
 
     // https://openai.com/pricing/
     // gpt-3.5-turbo
@@ -217,6 +225,20 @@ export class GPTTokens {
         console.warn('Warning:', message)
     }
 
+    public get functionsUsedTokens () {
+        if (!this.functions.length) return 0
+
+        this.functions.forEach(item => {
+            this.messages.push({
+                role   : 'function',
+                name   : item.name,
+                content: JSON.stringify(item),
+            })
+        })
+
+        // GPTTokens.contentUsedTokens()
+    }
+
     /**
      * Return the number of tokens in a list of messages.
      * @param messages A list of messages.
@@ -266,8 +288,29 @@ export class GPTTokens {
             num_tokens += tokens_per_message
 
             for (const [key, value] of Object.entries(message)) {
-                num_tokens += encoding.encode(value as string).length
+                num_tokens += encoding.encode(value).length
                 if (key === 'name') { num_tokens += tokens_per_name }
+
+                // if (typeof value === 'string') {
+                //     num_tokens += encoding.encode(value).length
+                //     if (key === 'name') { num_tokens += tokens_per_name }
+                // } else {
+                //     const recursion = (x: any) => {
+                //         for (const xKey of Object.keys(x)) {
+                //             if (typeof x[xKey] === 'string') {
+                //                 num_tokens += encoding.encode(x[xKey]).length
+                //             } else if (Array.isArray(x[xKey])) {
+                //                 num_tokens += encoding.encode(JSON.stringify(x[xKey])).length
+                //             } else {
+                //                 recursion(x[xKey])
+                //             }
+                //         }
+                //
+                //         num_tokens += tokens_per_message
+                //     }
+                //
+                //     recursion(value)
+                // }
             }
         }
 
