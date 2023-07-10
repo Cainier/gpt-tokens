@@ -1,6 +1,6 @@
 {
     "name": "gpt-tokens",
-    "version": "1.0.10",
+    "version": "1.1.0",
     "description": "Calculate the token consumption and amount of openai gpt message",
     "keywords": [
         "gpt",
@@ -13,8 +13,7 @@
         "amount"
     ],
     "scripts": {
-        "test": "node test.js",
-        "build": "yarn && tsc && yarn test"
+        "build": "yarn && tsc && node test.js"
     },
     "main": "index.js",
     "types": "index.d.ts",
@@ -24,7 +23,8 @@
     "license": "MIT",
     "dependencies": {
         "decimal.js": "^10.4.3",
-        "js-tiktoken": "^1.0.7"
+        "js-tiktoken": "^1.0.7",
+        "openai": "^3.3.0"
     },
     "devDependencies": {
         "@types/node": "^12.20.0",
