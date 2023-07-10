@@ -15,6 +15,7 @@ export declare class GPTTokens {
         messages: MessageItem[];
         plus?: boolean;
     });
+    static readonly supportModels: supportModelType[];
     readonly plus: boolean;
     readonly model: supportModelType;
     readonly messages: MessageItem[];
@@ -25,10 +26,14 @@ export declare class GPTTokens {
     readonly gpt4_8kCompletionTokenUnit: number;
     readonly gpt4_32kPromptTokenUnit: number;
     readonly gpt4_32kCompletionTokenUnit: number;
-    get usedTokens(): number;
     get usedUSD(): number;
-    private get promptUsedTokens();
-    private get completionUsedTokens();
+    get usedTokens(): number;
+    get promptUsedTokens(): number;
+    get completionUsedTokens(): number;
+    static contentUsedTokens(model: supportModelType, content: string): number;
+    private get lastMessage();
+    private get promptMessages();
+    private get completionMessage();
     /**
      * Print a warning message.
      * @param message The message to print. Will be prefixed with "Warning: ".
@@ -42,6 +47,7 @@ export declare class GPTTokens {
      * @returns The number of tokens in the messages.
      * @throws If the model is not supported.
      */
-    private num_tokens_from_messages;
+    private static num_tokens_from_messages;
 }
+export declare function testGPTTokens(apiKey: string): Promise<void>;
 export {};
