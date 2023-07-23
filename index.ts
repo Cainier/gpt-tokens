@@ -1,6 +1,21 @@
 import { encodingForModel, getEncoding, Tiktoken } from 'js-tiktoken'
 import Decimal                                     from 'decimal.js'
 
+let modelEncodingCache: { [key in supportModelType]?: Tiktoken } = {};
+
+export function getEncodingForModelCached(model: supportModelType): Tiktoken {
+    if (!modelEncodingCache[model]) {
+        try {
+            modelEncodingCache[model] = encodingForModel(model);
+        } catch (e) {
+            console.info('Model not found. Using cl100k_base encoding.');
+            modelEncodingCache[model] = getEncoding('cl100k_base');
+        }
+    }
+
+    return modelEncodingCache[model]!;
+}
+
 /**
  * This is a port of the Python code from
  *
@@ -183,13 +198,7 @@ export class GPTTokens {
     public static contentUsedTokens (model: supportModelType, content: string) {
         let encoding!: Tiktoken
 
-        try {
-            encoding = encodingForModel(model)
-        } catch (e) {
-            console.info('model not found. Using cl100k_base encoding.')
-
-            encoding = getEncoding('cl100k_base')
-        }
+        encoding = getEncodingForModelCached(model)
 
         return encoding.encode(content).length
     }
@@ -253,13 +262,7 @@ export class GPTTokens {
             tokens_per_name    = 1
         }
 
-        try {
-            encoding = encodingForModel(model)
-        } catch (e) {
-            console.info('model not found. Using cl100k_base encoding.')
-
-            encoding = getEncoding('cl100k_base')
-        }
+        encoding = getEncodingForModelCached(model)
 
         // Python 2 Typescript by gpt-4
         for (const message of messages) {
