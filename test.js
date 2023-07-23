@@ -8,14 +8,14 @@ const { GPTTokens, testGPTTokens } = require('./index')
     for (let i = 0; i < 10; i++) {
         console.time('GPTTokens')
         const usageInfo = new GPTTokens({
-        plus: false,
-        model: 'gpt-3.5-turbo-0613',
-        messages: [
-            {
-            role: 'user',
-            content: 'Hello world',
-            },
-        ],
+            plus    : false,
+            model   : 'gpt-3.5-turbo-0613',
+            messages: [
+                {
+                    role   : 'user',
+                    content: 'Hello world',
+                },
+            ],
         })
 
         usageInfo.usedTokens
