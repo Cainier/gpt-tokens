@@ -35,9 +35,23 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.testGPTTokens = exports.GPTTokens = void 0;
+exports.testGPTTokens = exports.GPTTokens = exports.getEncodingForModelCached = void 0;
 const js_tiktoken_1 = require("js-tiktoken");
 const decimal_js_1 = __importDefault(require("decimal.js"));
+let modelEncodingCache = {};
+function getEncodingForModelCached(model) {
+    if (!modelEncodingCache[model]) {
+        try {
+            modelEncodingCache[model] = (0, js_tiktoken_1.encodingForModel)(model);
+        }
+        catch (e) {
+            console.info('Model not found. Using cl100k_base encoding.');
+            modelEncodingCache[model] = (0, js_tiktoken_1.getEncoding)('cl100k_base');
+        }
+    }
+    return modelEncodingCache[model];
+}
+exports.getEncodingForModelCached = getEncodingForModelCached;
 class GPTTokens {
     constructor(options) {
         // https://openai.com/pricing/
@@ -147,13 +161,7 @@ class GPTTokens {
     }
     static contentUsedTokens(model, content) {
         let encoding;
-        try {
-            encoding = (0, js_tiktoken_1.encodingForModel)(model);
-        }
-        catch (e) {
-            console.info('model not found. Using cl100k_base encoding.');
-            encoding = (0, js_tiktoken_1.getEncoding)('cl100k_base');
-        }
+        encoding = getEncodingForModelCached(model);
         return encoding.encode(content).length;
     }
     get lastMessage() {
@@ -208,13 +216,7 @@ class GPTTokens {
             tokens_per_message = 3;
             tokens_per_name = 1;
         }
-        try {
-            encoding = (0, js_tiktoken_1.encodingForModel)(model);
-        }
-        catch (e) {
-            console.info('model not found. Using cl100k_base encoding.');
-            encoding = (0, js_tiktoken_1.getEncoding)('cl100k_base');
-        }
+        encoding = getEncodingForModelCached(model);
         // Python 2 Typescript by gpt-4
         for (const message of messages) {
             num_tokens += tokens_per_message;

@@ -1,3 +1,5 @@
+import { Tiktoken } from 'js-tiktoken';
+export declare function getEncodingForModelCached(model: supportModelType): Tiktoken;
 /**
  * This is a port of the Python code from
  *
