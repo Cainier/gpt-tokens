@@ -1,19 +1,19 @@
 import { encodingForModel, getEncoding, Tiktoken } from 'js-tiktoken'
 import Decimal                                     from 'decimal.js'
 
-let modelEncodingCache: { [key in supportModelType]?: Tiktoken } = {};
+let modelEncodingCache: { [key in supportModelType]?: Tiktoken } = {}
 
-export function getEncodingForModelCached(model: supportModelType): Tiktoken {
+export function getEncodingForModelCached (model: supportModelType): Tiktoken {
     if (!modelEncodingCache[model]) {
         try {
-            modelEncodingCache[model] = encodingForModel(model);
+            modelEncodingCache[model] = encodingForModel(model)
         } catch (e) {
-            console.info('Model not found. Using cl100k_base encoding.');
-            modelEncodingCache[model] = getEncoding('cl100k_base');
+            console.info('Model not found. Using cl100k_base encoding.')
+            modelEncodingCache[model] = getEncoding('cl100k_base')
         }
     }
 
-    return modelEncodingCache[model]!;
+    return modelEncodingCache[model]!
 }
 
 /**
@@ -45,12 +45,10 @@ export class GPTTokens {
     constructor (options: {
         model: supportModelType
         messages: MessageItem []
-        plus?: boolean
     }) {
         const {
                   model,
                   messages,
-                  plus = false,
               } = options
 
         if (!GPTTokens.supportModels.includes(model)) throw new Error(`Model ${model} is not supported`)
@@ -65,7 +63,6 @@ export class GPTTokens {
             this.warning(`${model} may update over time. Returning num tokens assuming gpt-4-32k-0613`)
 
         this.model    = model
-        this.plus     = plus
         this.messages = messages
     }
 
@@ -83,14 +80,18 @@ export class GPTTokens {
         'gpt-4-32k-0613',
     ]
 
-    public readonly plus
     public readonly model
     public readonly messages
 
     // https://openai.com/pricing/
-    // gpt-3.5-turbo
+    // gpt-3.5-turbo 4K context
+    // $0.0015 / 1K tokens
+    public readonly gpt3_5_turboPromptTokenUnit = new Decimal(0.0015).div(1000).toNumber()
+
+    // https://openai.com/pricing/
+    // gpt-3.5-turbo 4K context
     // $0.002 / 1K tokens
-    public readonly gpt3_5_turboTokenUnit = new Decimal(0.002).div(1000).toNumber()
+    public readonly gpt3_5_turboCompletionTokenUnit = new Decimal(0.002).div(1000).toNumber()
 
     // https://openai.com/pricing/
     // gpt-3.5-turbo-16k
@@ -131,9 +132,14 @@ export class GPTTokens {
             'gpt-3.5-turbo',
             'gpt-3.5-turbo-0301',
             'gpt-3.5-turbo-0613',
-        ].includes(this.model)) price = new Decimal(this.usedTokens)
-            .mul(this.gpt3_5_turboTokenUnit)
-            .toNumber()
+        ].includes(this.model)) {
+            const promptUSD     = new Decimal(this.promptUsedTokens)
+                .mul(this.gpt3_5_turboPromptTokenUnit)
+            const completionUSD = new Decimal(this.completionUsedTokens)
+                .mul(this.gpt3_5_turboCompletionTokenUnit)
+
+            price = promptUSD.add(completionUSD).toNumber()
+        }
 
         if ([
             'gpt-3.5-turbo-16k',
@@ -173,9 +179,7 @@ export class GPTTokens {
             price = promptUSD.add(completionUSD).toNumber()
         }
 
-        return this.plus && this.model.startsWith('gpt-3.5-turbo')
-            ? new Decimal(price).mul(0.75).toNumber()
-            : price
+        return price
     }
 
     // Used Tokens (total)
@@ -183,7 +187,7 @@ export class GPTTokens {
         return this.promptUsedTokens + this.completionUsedTokens
     }
 
-    // Used Tokens (prompt
+    // Used Tokens (prompt)
     public get promptUsedTokens () {
         return GPTTokens.num_tokens_from_messages(this.promptMessages, this.model)
     }

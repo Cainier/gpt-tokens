@@ -19,8 +19,6 @@ yarn add gpt-tokens
 import { GPTTokens } from 'gpt-tokens'
 
 const usageInfo = new GPTTokens({
-    // Plus enjoy a 25% cost reduction for input tokens on GPT-3.5 Turbo (0.0015 per 1K input tokens)
-    plus    : false,
     model   : 'gpt-3.5-turbo-0613',
     messages: [
         {

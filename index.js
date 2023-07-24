@@ -55,9 +55,13 @@ exports.getEncodingForModelCached = getEncodingForModelCached;
 class GPTTokens {
     constructor(options) {
         // https://openai.com/pricing/
-        // gpt-3.5-turbo
+        // gpt-3.5-turbo 4K context
+        // $0.0015 / 1K tokens
+        this.gpt3_5_turboPromptTokenUnit = new decimal_js_1.default(0.0015).div(1000).toNumber();
+        // https://openai.com/pricing/
+        // gpt-3.5-turbo 4K context
         // $0.002 / 1K tokens
-        this.gpt3_5_turboTokenUnit = new decimal_js_1.default(0.002).div(1000).toNumber();
+        this.gpt3_5_turboCompletionTokenUnit = new decimal_js_1.default(0.002).div(1000).toNumber();
         // https://openai.com/pricing/
         // gpt-3.5-turbo-16k
         // Prompt: $0.003 / 1K tokens
@@ -83,7 +87,7 @@ class GPTTokens {
         // gpt-4-32k
         // Completion: $0.12 / 1K tokens
         this.gpt4_32kCompletionTokenUnit = new decimal_js_1.default(0.12).div(1000).toNumber();
-        const { model, messages, plus = false, } = options;
+        const { model, messages, } = options;
         if (!GPTTokens.supportModels.includes(model))
             throw new Error(`Model ${model} is not supported`);
         if (model === 'gpt-3.5-turbo')
@@ -95,7 +99,6 @@ class GPTTokens {
         if (model === 'gpt-4-32k')
             this.warning(`${model} may update over time. Returning num tokens assuming gpt-4-32k-0613`);
         this.model = model;
-        this.plus = plus;
         this.messages = messages;
     }
     // Used USD
@@ -105,10 +108,13 @@ class GPTTokens {
             'gpt-3.5-turbo',
             'gpt-3.5-turbo-0301',
             'gpt-3.5-turbo-0613',
-        ].includes(this.model))
-            price = new decimal_js_1.default(this.usedTokens)
-                .mul(this.gpt3_5_turboTokenUnit)
-                .toNumber();
+        ].includes(this.model)) {
+            const promptUSD = new decimal_js_1.default(this.promptUsedTokens)
+                .mul(this.gpt3_5_turboPromptTokenUnit);
+            const completionUSD = new decimal_js_1.default(this.completionUsedTokens)
+                .mul(this.gpt3_5_turboCompletionTokenUnit);
+            price = promptUSD.add(completionUSD).toNumber();
+        }
         if ([
             'gpt-3.5-turbo-16k',
             'gpt-3.5-turbo-16k-0613',
@@ -141,15 +147,13 @@ class GPTTokens {
                 .mul(this.gpt4_32kCompletionTokenUnit);
             price = promptUSD.add(completionUSD).toNumber();
         }
-        return this.plus && this.model.startsWith('gpt-3.5-turbo')
-            ? new decimal_js_1.default(price).mul(0.75).toNumber()
-            : price;
+        return price;
     }
     // Used Tokens (total)
     get usedTokens() {
         return this.promptUsedTokens + this.completionUsedTokens;
     }
-    // Used Tokens (prompt
+    // Used Tokens (prompt)
     get promptUsedTokens() {
         return GPTTokens.num_tokens_from_messages(this.promptMessages, this.model);
     }
