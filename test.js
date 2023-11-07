@@ -2,7 +2,10 @@ const { GPTTokens, testGPTTokens } = require('./index')
 
 ;(async () => {
     console.log('Running GPT tests')
-    await testGPTTokens(process.env.OPENAI_API_KEY)
+
+    const [apiKey] = process.argv.slice(2)
+
+    await testGPTTokens(apiKey || process.env.OPENAI_API_KEY)
 
     console.log('Testing performance')
     for (let i = 0; i < 10; i++) {

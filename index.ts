@@ -6,9 +6,12 @@ let modelEncodingCache: { [key in supportModelType]?: Tiktoken } = {}
 export function getEncodingForModelCached (model: supportModelType): Tiktoken {
     if (!modelEncodingCache[model]) {
         try {
-            modelEncodingCache[model] = encodingForModel(model)
+            if (['gpt-3.5-turbo-1106', 'gpt-3.5-turbo-instruct'].includes(model)) model = 'gpt-3.5-turbo'
+            if (['gpt-4-1106-preview'].includes(model)) model = 'gpt-4'
+
+            modelEncodingCache[model] = encodingForModel(model as any)
         } catch (e) {
-            console.info('Model not found. Using cl100k_base encoding.')
+            console.error('Model not found. Using cl100k_base encoding.')
             modelEncodingCache[model] = getEncoding('cl100k_base')
         }
     }
@@ -22,12 +25,13 @@ export function getEncodingForModelCached (model: supportModelType): Tiktoken {
  * https://notebooks.githubusercontent.com/view/ipynb?browser=edge&bypass_fastly=true&color_mode=dark&commit=d67c4181abe9dfd871d382930bb778b7014edc66&device=unknown_device&docs_host=https%3A%2F%2Fdocs.github.com&enc_url=68747470733a2f2f7261772e67697468756275736572636f6e74656e742e636f6d2f6f70656e61692f6f70656e61692d636f6f6b626f6f6b2f643637633431383161626539646664383731643338323933306262373738623730313465646336362f6578616d706c65732f486f775f746f5f636f756e745f746f6b656e735f776974685f74696b746f6b656e2e6970796e62&logged_in=true&nwo=openai%2Fopenai-cookbook&path=examples%2FHow_to_count_tokens_with_tiktoken.ipynb&platform=mac&repository_id=468576060&repository_type=Repository&version=114#6d8d98eb-e018-4e1f-8c9e-19b152a97aaf
  */
 
-export type supportModelType =
+type chatModels =
     | 'gpt-3.5-turbo'
     | 'gpt-3.5-turbo-0301'
     | 'gpt-3.5-turbo-0613'
     | 'gpt-3.5-turbo-16k'
     | 'gpt-3.5-turbo-16k-0613'
+    | 'gpt-3.5-turbo-1106'
     | 'gpt-4'
     | 'gpt-4-0314'
     | 'gpt-4-0613'
@@ -35,6 +39,11 @@ export type supportModelType =
     | 'gpt-4-32k-0314'
     | 'gpt-4-32k-0613'
     | 'gpt-4-1106-preview'
+
+type instructModel =
+    | 'gpt-3.5-turbo-instruct'
+
+export type supportModelType = chatModels | instructModel
 
 interface MessageItem {
     name?: string
@@ -45,11 +54,16 @@ interface MessageItem {
 export class GPTTokens {
     constructor (options: {
         model: supportModelType
-        messages: MessageItem []
+        messages?: MessageItem []
+        instruct?: {
+            prompt: string
+            completion: string
+        }
     }) {
         const {
                   model,
                   messages,
+                  instruct,
               } = options
 
         if (!GPTTokens.supportModels.includes(model)) throw new Error(`Model ${model} is not supported`)
@@ -65,6 +79,14 @@ export class GPTTokens {
 
         this.model    = model
         this.messages = messages
+        this.instruct = instruct
+
+        this.checkOptions()
+    }
+
+    private checkOptions () {
+        if (this.instructModel && !this.instruct) throw new Error(`Model ${this.model} is instruct model, please use option "instruct"`)
+        if (this.chatModel && !this.messages) throw new Error(`Model ${this.model} is chat model, please use option "messages"`)
     }
 
     public static readonly supportModels: supportModelType [] = [
@@ -73,6 +95,8 @@ export class GPTTokens {
         'gpt-3.5-turbo-0613',
         'gpt-3.5-turbo-16k',
         'gpt-3.5-turbo-16k-0613',
+        'gpt-3.5-turbo-1106',
+        'gpt-3.5-turbo-instruct',
         'gpt-4',
         'gpt-4-0314',
         'gpt-4-0613',
@@ -82,8 +106,33 @@ export class GPTTokens {
         'gpt-4-1106-preview',
     ]
 
+    private get instructModel () {
+        return [
+            'gpt-3.5-turbo-instruct',
+        ].includes(this.model)
+    }
+
+    private get chatModel () {
+        return [
+            'gpt-3.5-turbo-0301',
+            'gpt-3.5-turbo',
+            'gpt-3.5-turbo-0613',
+            'gpt-3.5-turbo-16k',
+            'gpt-3.5-turbo-16k-0613',
+            'gpt-3.5-turbo-1106',
+            'gpt-4',
+            'gpt-4-0314',
+            'gpt-4-0613',
+            'gpt-4-32k',
+            'gpt-4-32k-0314',
+            'gpt-4-32k-0613',
+            'gpt-4-1106-preview',
+        ].includes(this.model)
+    }
+
     public readonly model
     public readonly messages
+    public readonly instruct
 
     // https://openai.com/pricing/
     // gpt-3.5-turbo 4K context
@@ -104,6 +153,26 @@ export class GPTTokens {
     // gpt-3.5-turbo-16k
     // Prompt: $0.004 / 1K tokens
     public readonly gpt3_5_turbo_16kCompletionTokenUnit = new Decimal(0.004).div(1000).toNumber()
+
+    // https://openai.com/pricing/
+    // gpt-3.5-turbo-16k
+    // Prompt: $0.003 / 1K tokens
+    public readonly gpt3_5_turbo_1106PromptTokenUnit = new Decimal(0.001).div(1000).toNumber()
+
+    // https://openai.com/pricing/
+    // gpt-3.5-turbo-16k
+    // Prompt: $0.004 / 1K tokens
+    public readonly gpt3_5_turbo_1106CompletionTokenUnit = new Decimal(0.002).div(1000).toNumber()
+
+    // https://openai.com/pricing/
+    // gpt-3.5-turbo-16k
+    // Prompt: $0.003 / 1K tokens
+    public readonly gpt3_5_turbo_instructPromptTokenUnit = new Decimal(0.0015).div(1000).toNumber()
+
+    // https://openai.com/pricing/
+    // gpt-3.5-turbo-16k
+    // Prompt: $0.004 / 1K tokens
+    public readonly gpt3_5_turbo_instructCompletionTokenUnit = new Decimal(0.002).div(1000).toNumber()
 
     // https://openai.com/pricing/
     // gpt-4-8k
@@ -192,14 +261,13 @@ export class GPTTokens {
         }
 
         if (this.model === 'gpt-4-1106-preview') {
-          const promptUSD = new Decimal(this.promptUsedTokens)
-            .mul(this.gpt4_turbo_previewPromptTokenUnit)
-          const completionUSD = new Decimal(this.completionUsedTokens)
-            .mul(this.gpt4_turbo_previewCompletionTokenUnit)
+            const promptUSD     = new Decimal(this.promptUsedTokens)
+                .mul(this.gpt4_turbo_previewPromptTokenUnit)
+            const completionUSD = new Decimal(this.completionUsedTokens)
+                .mul(this.gpt4_turbo_previewCompletionTokenUnit)
 
-          price = promptUSD.add(completionUSD).toNumber()
+            price = promptUSD.add(completionUSD).toNumber()
         }
-
 
         return price
     }
@@ -211,7 +279,9 @@ export class GPTTokens {
 
     // Used Tokens (prompt)
     public get promptUsedTokens () {
-        return GPTTokens.num_tokens_from_messages(this.promptMessages, this.model)
+        if (this.instructModel) return GPTTokens.num_tokens_from_message(this.instruct!.prompt, this.model as instructModel)
+
+        return GPTTokens.num_tokens_from_messages(this.promptMessages, this.model as chatModels)
     }
 
     // Used Tokens (completion)
@@ -230,14 +300,16 @@ export class GPTTokens {
     }
 
     private get lastMessage () {
-        return this.messages[this.messages.length - 1]
+        return this.messages![this.messages!.length - 1]
     }
 
     private get promptMessages () {
-        return this.lastMessage.role === 'assistant' ? this.messages.slice(0, -1) : this.messages
+        return this.lastMessage.role === 'assistant' ? this.messages!.slice(0, -1) : this.messages!
     }
 
     private get completionMessage () {
+        if (this.instructModel) return this.instruct!.completion
+
         return this.lastMessage.role === 'assistant'
             ? this.lastMessage.content
             : ''
@@ -259,7 +331,7 @@ export class GPTTokens {
      * @returns The number of tokens in the messages.
      * @throws If the model is not supported.
      */
-    private static num_tokens_from_messages (messages: MessageItem [], model: supportModelType) {
+    private static num_tokens_from_messages (messages: MessageItem [], model: chatModels) {
         let encoding!: Tiktoken
         let tokens_per_message!: number
         let tokens_per_name !: number
@@ -277,6 +349,8 @@ export class GPTTokens {
             'gpt-3.5-turbo-0613',
             'gpt-3.5-turbo-16k',
             'gpt-3.5-turbo-16k-0613',
+            'gpt-3.5-turbo-16k-0613',
+            'gpt-3.5-turbo-1106',
             'gpt-4',
             'gpt-4-0314',
             'gpt-4-0613',
@@ -297,7 +371,9 @@ export class GPTTokens {
 
             for (const [key, value] of Object.entries(message)) {
                 num_tokens += encoding.encode(value as string).length
-                if (key === 'name') { num_tokens += tokens_per_name }
+                if (key === 'name') {
+                    num_tokens += tokens_per_name
+                }
             }
         }
 
@@ -307,15 +383,20 @@ export class GPTTokens {
         // every reply is primed with <|start|>assistant<|message|>
         return num_tokens + 3
     }
+
+    private static num_tokens_from_message (message: string, model: instructModel) {
+        // every reply is primed with <|start|>assistant<|message|>
+        return getEncodingForModelCached(model).encode(message).length
+    }
 }
 
 export async function testGPTTokens (apiKey: string) {
-    const { Configuration, OpenAIApi } = await import('openai')
+    const { OpenAI } = await import('openai')
 
-    const configuration            = new Configuration({ apiKey })
-    const openai                   = new OpenAIApi(configuration)
+    const openai                   = new OpenAI({ apiKey })
+    const prompt                   = 'How are u'
     const messages: MessageItem [] = [
-        { role: 'user', content: 'Hello, how are u' },
+        { role: 'user', content: prompt },
     ]
     const { length: modelsNum }    = GPTTokens.supportModels
 
@@ -326,37 +407,66 @@ export async function testGPTTokens (apiKey: string) {
 
         let ignoreModel = false
 
-        const chatCompletion = await openai.createChatCompletion({
-            model,
-            messages,
-        })
-            .catch(err => {
-                ignoreModel = true
+        let chatCompletion!: any
+        let responseMessage!: string
+        let gptTokens!: GPTTokens
 
-                console.info(`Ignore model ${model}:`, err.message)
+        if ([
+            'gpt-3.5-turbo-instruct',
+        ].includes(model)) {
+            chatCompletion = await openai.completions.create({
+                model,
+                prompt,
             })
+                .catch(err => {
+                    ignoreModel = true
+
+                    console.info(`Ignore model ${model}:`, err.message)
+                })
+
+            gptTokens = new GPTTokens({
+                model,
+                instruct: {
+                    prompt,
+                    completion: chatCompletion?.choices[0].text,
+                },
+            })
+        } else {
+            continue
+
+            chatCompletion = await openai.chat.completions.create({
+                model,
+                messages,
+            })
+                .catch(err => {
+                    ignoreModel = true
+
+                    console.info(`Ignore model ${model}:`, err.message)
+                })
+
+            gptTokens = new GPTTokens({
+                model,
+                messages: [
+                    ...messages,
+                    ...[chatCompletion?.choices[0].message],
+                ] as MessageItem [],
+            })
+        }
 
         if (ignoreModel) continue
 
-        const responseMessage = chatCompletion!.data.choices[0].message!
-        const openaiUsage     = chatCompletion!.data.usage!
+        const openaiUsage = chatCompletion?.usage
 
-        const gptTokens = new GPTTokens({
-            model,
-            messages: [
-                ...messages,
-                ...[responseMessage],
-            ] as MessageItem [],
-        })
-
-        if (gptTokens.usedTokens !== openaiUsage?.total_tokens)
-            throw new Error(`Test ${model} usedTokens failed (openai: ${openaiUsage.total_tokens}/ gpt-tokens: ${gptTokens.usedTokens})`)
+        console.log(chatCompletion?.choices[0].text, chatCompletion?.choices[0])
 
         if (gptTokens.promptUsedTokens !== openaiUsage.prompt_tokens)
             throw new Error(`Test ${model} promptUsedTokens failed (openai: ${openaiUsage.prompt_tokens}/ gpt-tokens: ${gptTokens.promptUsedTokens})`)
 
         if (gptTokens.completionUsedTokens !== openaiUsage.completion_tokens)
             throw new Error(`Test ${model} completionUsedTokens failed (openai: ${openaiUsage.completion_tokens}/ gpt-tokens: ${gptTokens.completionUsedTokens})`)
+
+        if (gptTokens.usedTokens !== openaiUsage?.total_tokens)
+            throw new Error(`Test ${model} usedTokens failed (openai: ${openaiUsage?.total_tokens}/ gpt-tokens: ${gptTokens.usedTokens})`)
 
         console.info('Pass!')
     }
