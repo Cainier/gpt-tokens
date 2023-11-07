@@ -34,6 +34,7 @@ export type supportModelType =
     | 'gpt-4-32k'
     | 'gpt-4-32k-0314'
     | 'gpt-4-32k-0613'
+    | 'gpt-4-1106-preview'
 
 interface MessageItem {
     name?: string
@@ -78,6 +79,7 @@ export class GPTTokens {
         'gpt-4-32k',
         'gpt-4-32k-0314',
         'gpt-4-32k-0613',
+        'gpt-4-1106-preview',
     ]
 
     public readonly model
@@ -123,6 +125,16 @@ export class GPTTokens {
     // gpt-4-32k
     // Completion: $0.12 / 1K tokens
     public readonly gpt4_32kCompletionTokenUnit = new Decimal(0.12).div(1000).toNumber()
+
+    // https://openai.com/pricing/
+    // gpt-4-1106-preview
+    // Prompt: $0.01 / 1K tokens
+    public readonly gpt4_turbo_previewPromptTokenUnit = new Decimal(0.01).div(1000).toNumber()
+
+    // https://openai.com/pricing/
+    // gpt-4-1106-preview
+    // Completion: $0.03 / 1K tokens
+    public readonly gpt4_turbo_previewCompletionTokenUnit = new Decimal(0.03).div(1000).toNumber()
 
     // Used USD
     public get usedUSD (): number {
@@ -178,6 +190,16 @@ export class GPTTokens {
 
             price = promptUSD.add(completionUSD).toNumber()
         }
+
+        if (this.model === 'gpt-4-1106-preview') {
+          const promptUSD = new Decimal(this.promptUsedTokens)
+            .mul(this.gpt4_turbo_previewPromptTokenUnit)
+          const completionUSD = new Decimal(this.completionUsedTokens)
+            .mul(this.gpt4_turbo_previewCompletionTokenUnit)
+
+          price = promptUSD.add(completionUSD).toNumber()
+        }
+
 
         return price
     }
@@ -261,6 +283,7 @@ export class GPTTokens {
             'gpt-4-32k',
             'gpt-4-32k-0314',
             'gpt-4-32k-0613',
+            'gpt-4-1106-preview'
         ].includes(model)) {
             tokens_per_message = 3
             tokens_per_name    = 1
