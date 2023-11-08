@@ -88,6 +88,7 @@ Verify the function above in [openai-cookbook](https://github.com/openai/openai-
 * gpt-3.5-turbo
 * gpt-3.5-turbo-0301
 * gpt-3.5-turbo-0613
+* gpt-3.5-turbo-1106
 * gpt-3.5-turbo-16k
 * gpt-3.5-turbo-16k-0613
 * gpt-4
@@ -96,41 +97,40 @@ Verify the function above in [openai-cookbook](https://github.com/openai/openai-
 * gpt-4-32k
 * gpt-4-32k-0314
 * gpt-4-32k-0613
+* gpt-4-1106-preview
 
 Test in your project
 
-```typescript
-import { testGPTTokens } from 'gpt-tokens'
+```bash
+node test.js yourAPIKey
 
-testGPTTokens('Your openai apiKey').then()
-
-// [1/11]: Testing gpt-3.5-turbo-0301...
-// Pass!
-// [2/11]: Testing gpt-3.5-turbo...
-// Warning: gpt-3.5-turbo may update over time. Returning num tokens assuming gpt-3.5-turbo-0613
-// Pass!
-// [3/11]: Testing gpt-3.5-turbo-0613...
-// Pass!
-// [4/11]: Testing gpt-3.5-turbo-16k...
-// Warning: gpt-3.5-turbo-16k may update over time. Returning num tokens assuming gpt-3.5-turbo-16k-0613
-// Pass!
-// [5/11]: Testing gpt-3.5-turbo-16k-0613...
-// Pass!
-// [6/11]: Testing gpt-4...
-// Warning: gpt-4 may update over time. Returning num tokens assuming gpt-4-0613
-// Pass!
-// [7/11]: Testing gpt-4-0314...
-// Pass!
-// [8/11]: Testing gpt-4-0613...
-// Pass!
-// [9/11]: Testing gpt-4-32k...
-// Ignore model gpt-4-32k: Request failed with status code 404
-// [10/11]: Testing gpt-4-32k-0314...
-// Ignore model gpt-4-32k-0314: Request failed with status code 404
-// [11/11]: Testing gpt-4-32k-0613...
-// Ignore model gpt-4-32k-0613: Request failed with status code 404
-// Test success!
-// ✨  Done in 27.13s.
+#[1/11]: Testing gpt-3.5-turbo-0301...
+#Pass!
+#[2/11]: Testing gpt-3.5-turbo...
+#Warning: gpt-3.5-turbo may update over time. Returning num tokens assuming gpt-3.5-turbo-0613
+#Pass!
+#[3/11]: Testing gpt-3.5-turbo-0613...
+#Pass!
+#[4/11]: Testing gpt-3.5-turbo-16k...
+#Warning: gpt-3.5-turbo-16k may update over time. Returning num tokens assuming gpt-3.5-turbo-16k-0613
+#Pass!
+#[5/11]: Testing gpt-3.5-turbo-16k-0613...
+#Pass!
+#[6/11]: Testing gpt-4...
+#Warning: gpt-4 may update over time. Returning num tokens assuming gpt-4-0613
+#Pass!
+#[7/11]: Testing gpt-4-0314...
+#Pass!
+#[8/11]: Testing gpt-4-0613...
+#Pass!
+#[9/11]: Testing gpt-4-32k...
+#Ignore model gpt-4-32k: Request failed with status code 404
+#[10/11]: Testing gpt-4-32k-0314...
+#Ignore model gpt-4-32k-0314: Request failed with status code 404
+#[11/11]: Testing gpt-4-32k-0613...
+#Ignore model gpt-4-32k-0613: Request failed with status code 404
+#Test success!
+#✨  Done in 27.13s.
 ```
 
 ## Dependencies

@@ -1,10 +1,15 @@
-const { GPTTokens, testGPTTokens } = require('./index')
+const OpenAI                       = require('openai')
+const { GPTTokens, testGPTTokens } = require('./index');
 
-;(async () => {
-    console.log('Running GPT tests')
-    await testGPTTokens(process.env.OPENAI_API_KEY)
+(async () => {
+    const [apiKey = process.env.OPENAI_API_KEY] = process.argv.slice(2)
 
-    console.log('Testing performance')
+    const openai = new OpenAI({ apiKey })
+
+    console.info('Testing GPT...')
+    await testGPTTokens(openai)
+
+    console.info('Testing performance...')
     for (let i = 0; i < 10; i++) {
         console.time('GPTTokens')
         const usageInfo = new GPTTokens({
