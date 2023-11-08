@@ -4,6 +4,11 @@ const { GPTTokens, testGPTTokens } = require('./index');
 (async () => {
     const [apiKey = process.env.OPENAI_API_KEY] = process.argv.slice(2)
 
+    if (!apiKey) {
+        console.error('No API key provided. Ignoring test.')
+        process.exit(0)
+    }
+
     const openai = new OpenAI({ apiKey })
 
     console.info('Testing GPT...')

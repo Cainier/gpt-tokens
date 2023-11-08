@@ -251,7 +251,6 @@ class GPTTokens {
         return num_tokens + 3;
     }
 }
-exports.GPTTokens = GPTTokens;
 GPTTokens.supportModels = [
     'gpt-3.5-turbo-0301',
     'gpt-3.5-turbo',
@@ -267,6 +266,7 @@ GPTTokens.supportModels = [
     'gpt-4-32k-0613',
     'gpt-4-1106-preview',
 ];
+exports.GPTTokens = GPTTokens;
 function testGPTTokens(openai) {
     return __awaiter(this, void 0, void 0, function* () {
         const prompt = `How are u`;
