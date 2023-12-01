@@ -1,6 +1,7 @@
 import { encodingForModel, getEncoding, Tiktoken } from 'js-tiktoken'
 import Decimal                                     from 'decimal.js'
 import OpenAI                                      from 'openai'
+import { promptTokensEstimate }                    from 'openai-chat-tokens'
 
 let modelEncodingCache: { [key in supportModelType]?: Tiktoken } = {}
 
@@ -49,27 +50,73 @@ interface MessageItem {
 
 export class GPTTokens {
     constructor (options: {
-        model: supportModelType
-        messages: MessageItem []
+        model?: supportModelType
+        fineTuneModel?: string
+        messages?: GPTTokens['messages']
+        training?: GPTTokens['training']
+        tools?: GPTTokens['tools']
+        debug?: boolean
     }) {
         const {
                   model,
+                  fineTuneModel,
                   messages,
+                  training,
+                  tools,
+                  debug = false,
               } = options
 
-        if (!GPTTokens.supportModels.includes(model)) throw new Error(`Model ${model} is not supported`)
-
         if (model === 'gpt-3.5-turbo')
-            this.warning(`${model} may update over time. Returning num tokens assuming gpt-3.5-turbo-0613`)
+            this.warning(`${ model } may update over time. Returning num tokens assuming gpt-3.5-turbo-0613`)
         if (model === 'gpt-3.5-turbo-16k')
-            this.warning(`${model} may update over time. Returning num tokens assuming gpt-3.5-turbo-16k-0613`)
+            this.warning(`${ model } may update over time. Returning num tokens assuming gpt-3.5-turbo-16k-0613`)
         if (model === 'gpt-4')
-            this.warning(`${model} may update over time. Returning num tokens assuming gpt-4-0613`)
+            this.warning(`${ model } may update over time. Returning num tokens assuming gpt-4-0613`)
         if (model === 'gpt-4-32k')
-            this.warning(`${model} may update over time. Returning num tokens assuming gpt-4-32k-0613`)
+            this.warning(`${ model } may update over time. Returning num tokens assuming gpt-4-32k-0613`)
 
-        this.model    = model
-        this.messages = messages
+        this.model         = model || fineTuneModel?.split(':')[1] as supportModelType
+        this.debug         = debug
+        this.fineTuneModel = fineTuneModel
+        this.messages      = messages
+        this.training      = training
+        this.tools         = tools
+
+        this.checkOptions()
+    }
+
+    private checkOptions () {
+        if (!GPTTokens.supportModels.includes(this.model))
+            throw new Error(`Model ${ this.model } is not supported`)
+
+        if (!this.messages && !this.training && !this.tools)
+            throw new Error('Must set on of messages | training | function')
+
+        if (this.fineTuneModel && !this.fineTuneModel.startsWith('ft:gpt-3.5-turbo'))
+            throw new Error(`Fine-tuning is not supported for ${ this.fineTuneModel }`)
+
+        // https://platform.openai.com/docs/guides/fine-tuning
+        if (![
+            'gpt-3.5-turbo',
+            'gpt-3.5-turbo-0613',
+            'gpt-3.5-turbo-1106',
+            'gpt-4-0613',
+        ].includes(this.model) && this.training)
+            throw new Error(`Fine-tuning is not supported for model ${ this.model }`)
+
+        // https://platform.openai.com/docs/guides/function-calling
+        if (![
+            'gpt-3.5-turbo',
+            'gpt-3.5-turbo-0613',
+            'gpt-3.5-turbo-1106',
+            'gpt-4',
+            'gpt-4-0613',
+            'gpt-4-1106-preview',
+        ].includes(this.model) && this.tools)
+            throw new Error(`Function is not supported for model ${ this.model }`)
+
+        if (this.tools && !this.messages)
+            throw new Error('Function must set messages')
     }
 
     public static readonly supportModels: supportModelType [] = [
@@ -88,8 +135,24 @@ export class GPTTokens {
         'gpt-4-1106-preview',
     ]
 
+    public readonly debug
     public readonly model
-    public readonly messages
+    public readonly fineTuneModel
+    public readonly messages?: MessageItem []
+    public readonly training?: {
+        data: {
+            messages: MessageItem []
+        } []
+        epochs: number
+    }
+    public readonly tools?: {
+        type: 'function'
+        function: {
+            name: string
+            description?: string
+            parameters: Record<string, unknown>
+        }
+    } []
 
     // https://openai.com/pricing/
     // gpt-3.5-turbo 4K context
@@ -151,10 +214,72 @@ export class GPTTokens {
     // Completion: $0.03 / 1K tokens
     public readonly gpt4_turbo_previewCompletionTokenUnit = new Decimal(0.03).div(1000).toNumber()
 
-    // Used USD
-    public get usedUSD (): number {
-        let price = 0
+    // https://openai.com/pricing/
+    // Fine-tuning models gpt-3.5-turbo
+    // Training: $0.008 / 1K tokens
+    public readonly gpt3_5_turbo_fine_tuneTrainingTokenUnit = new Decimal(0.008).div(1000).toNumber()
 
+    // https://openai.com/pricing/
+    // Fine-tuning models gpt-3.5-turbo
+    // Prompt: $0.003 / 1K tokens
+    public readonly gpt3_5_turbo_fine_tunePromptTokenUnit = new Decimal(0.003).div(1000).toNumber()
+
+    // https://openai.com/pricing/
+    // Fine-tuning models gpt-3.5-turbo
+    // Completion: $0.006 / 1K tokens
+    public readonly gpt3_5_turbo_fine_tuneCompletionTokenUnit = new Decimal(0.006).div(1000).toNumber()
+
+    // Used USD
+    public get usedUSD () {
+        if (this.training) return this.trainingUsedUSD()
+        if (this.tools) return this.functionUsedUSD()
+        if (this.fineTuneModel) return this.fineTuneUsedUSD()
+
+        return this.basicUsedTokens()
+    }
+
+    private trainingUsedUSD () {
+        return new Decimal(this.usedTokens).mul(this.gpt3_5_turbo_fine_tuneTrainingTokenUnit).toNumber()
+    }
+
+    private functionUsedUSD () {
+        if ([
+            'gpt-3.5-turbo',
+            'gpt-3.5-turbo-0613',
+        ].includes(this.model))
+            return new Decimal(this.usedTokens)
+                .mul(this.gpt3_5_turboPromptTokenUnit).toNumber()
+
+        if ([
+            'gpt-3.5-turbo-1106',
+        ].includes(this.model))
+            return new Decimal(this.usedTokens)
+                .mul(this.gpt3_5_turbo_1106PromptTokenUnit).toNumber()
+
+        if ([
+            'gpt-4',
+            'gpt-4-0613',
+        ].includes(this.model)) return new Decimal(this.usedTokens)
+            .mul(this.gpt4_8kPromptTokenUnit).toNumber()
+
+        if ([
+            'gpt-4-1106-preview',
+        ].includes(this.model)) return new Decimal(this.usedTokens)
+            .mul(this.gpt4_turbo_previewPromptTokenUnit).toNumber()
+
+        throw new Error(`Model ${ this.model } is not supported`)
+    }
+
+    private fineTuneUsedUSD () {
+        const promptUSD     = new Decimal(this.promptUsedTokens)
+            .mul(this.gpt3_5_turbo_fine_tunePromptTokenUnit)
+        const completionUSD = new Decimal(this.completionUsedTokens)
+            .mul(this.gpt3_5_turbo_fine_tuneCompletionTokenUnit)
+
+        return promptUSD.add(completionUSD).toNumber()
+    }
+
+    private basicUsedTokens () {
         if ([
             'gpt-3.5-turbo',
             'gpt-3.5-turbo-0301',
@@ -165,7 +290,7 @@ export class GPTTokens {
             const completionUSD = new Decimal(this.completionUsedTokens)
                 .mul(this.gpt3_5_turboCompletionTokenUnit)
 
-            price = promptUSD.add(completionUSD).toNumber()
+            return promptUSD.add(completionUSD).toNumber()
         }
 
         if ([
@@ -177,7 +302,7 @@ export class GPTTokens {
             const completionUSD = new Decimal(this.completionUsedTokens)
                 .mul(this.gpt3_5_turbo_16kCompletionTokenUnit)
 
-            price = promptUSD.add(completionUSD).toNumber()
+            return promptUSD.add(completionUSD).toNumber()
         }
 
         if ([
@@ -188,7 +313,7 @@ export class GPTTokens {
             const completionUSD = new Decimal(this.completionUsedTokens)
                 .mul(this.gpt3_5_turbo_1106CompletionTokenUnit)
 
-            price = promptUSD.add(completionUSD).toNumber()
+            return promptUSD.add(completionUSD).toNumber()
         }
 
         if ([
@@ -201,7 +326,7 @@ export class GPTTokens {
             const completionUSD = new Decimal(this.completionUsedTokens)
                 .mul(this.gpt4_8kCompletionTokenUnit)
 
-            price = promptUSD.add(completionUSD).toNumber()
+            return promptUSD.add(completionUSD).toNumber()
         }
 
         if ([
@@ -214,7 +339,7 @@ export class GPTTokens {
             const completionUSD = new Decimal(this.completionUsedTokens)
                 .mul(this.gpt4_32kCompletionTokenUnit)
 
-            price = promptUSD.add(completionUSD).toNumber()
+            return promptUSD.add(completionUSD).toNumber()
         }
 
         if (this.model === 'gpt-4-1106-preview') {
@@ -223,15 +348,29 @@ export class GPTTokens {
             const completionUSD = new Decimal(this.completionUsedTokens)
                 .mul(this.gpt4_turbo_previewCompletionTokenUnit)
 
-            price = promptUSD.add(completionUSD).toNumber()
+            return promptUSD.add(completionUSD).toNumber()
         }
 
-        return price
+        throw new Error(`Model ${ this.model } is not supported`)
     }
 
     // Used Tokens (total)
-    public get usedTokens () {
-        return this.promptUsedTokens + this.completionUsedTokens
+    public get usedTokens (): number {
+        if (this.training) return this.training.data
+            .map(({ messages }) => new GPTTokens({
+                model: this.model,
+                messages,
+            }).usedTokens + 2)
+            .reduce((a, b) => a + b, 0) * this.training.epochs
+
+        if (this.tools) return promptTokensEstimate({
+            messages : this.messages!,
+            functions: this.tools.map(item => item.function),
+        })
+
+        if (this.messages) return this.promptUsedTokens + this.completionUsedTokens
+
+        return 0
     }
 
     // Used Tokens (prompt)
@@ -274,6 +413,7 @@ export class GPTTokens {
      * @returns void
      */
     private warning (message: string) {
+        if (!this.debug) return
         console.warn('Warning:', message)
     }
 
@@ -322,6 +462,8 @@ export class GPTTokens {
             num_tokens += tokens_per_message
 
             for (const [key, value] of Object.entries(message)) {
+                if (typeof value !== 'string') continue
+
                 num_tokens += encoding.encode(value as string).length
                 if (key === 'name') {
                     num_tokens += tokens_per_name
@@ -337,8 +479,7 @@ export class GPTTokens {
     }
 }
 
-export async function testGPTTokens (openai: OpenAI) {
-    const prompt                   = `How are u`
+export async function testGPTTokens (openai: OpenAI, prompt: string) {
     const messages: MessageItem [] = [
         { role: 'user', content: prompt },
     ]
@@ -347,7 +488,7 @@ export async function testGPTTokens (openai: OpenAI) {
     for (let i = 0; i < modelsNum; i += 1) {
         const model = GPTTokens.supportModels[i]
 
-        console.info(`[${i + 1}/${modelsNum}]: Testing ${model}...`)
+        console.info(`[${ i + 1 }/${ modelsNum }]: Testing ${ model }...`)
 
         let ignoreModel = false
 
@@ -358,7 +499,7 @@ export async function testGPTTokens (openai: OpenAI) {
             .catch(err => {
                 ignoreModel = true
 
-                console.info(`Ignore model ${model}:`, err.message)
+                console.info(`Ignore model ${ model }:`, err.message)
             })
 
         const openaiUsage = chatCompletion?.usage
@@ -372,19 +513,20 @@ export async function testGPTTokens (openai: OpenAI) {
         })
 
         if (ignoreModel) continue
+
         if (!openaiUsage) {
-            console.error(`Test ${model} failed (openai return usage is null)`)
+            console.error(`Test ${ model } failed (openai return usage is null)`)
             continue
         }
 
         if (gptTokens.promptUsedTokens !== openaiUsage.prompt_tokens)
-            throw new Error(`Test ${model} promptUsedTokens failed (openai: ${openaiUsage.prompt_tokens}/ gpt-tokens: ${gptTokens.promptUsedTokens})`)
+            throw new Error(`Test ${ model } promptUsedTokens failed (openai: ${ openaiUsage.prompt_tokens }/ gpt-tokens: ${ gptTokens.promptUsedTokens })`)
 
         if (gptTokens.completionUsedTokens !== openaiUsage.completion_tokens)
-            throw new Error(`Test ${model} completionUsedTokens failed (openai: ${openaiUsage.completion_tokens}/ gpt-tokens: ${gptTokens.completionUsedTokens})`)
+            throw new Error(`Test ${ model } completionUsedTokens failed (openai: ${ openaiUsage.completion_tokens }/ gpt-tokens: ${ gptTokens.completionUsedTokens })`)
 
         if (gptTokens.usedTokens !== openaiUsage?.total_tokens)
-            throw new Error(`Test ${model} usedTokens failed (openai: ${openaiUsage?.total_tokens}/ gpt-tokens: ${gptTokens.usedTokens})`)
+            throw new Error(`Test ${ model } usedTokens failed (openai: ${ openaiUsage?.total_tokens }/ gpt-tokens: ${ gptTokens.usedTokens })`)
 
         console.info('Pass!')
     }

@@ -14,12 +14,33 @@ interface MessageItem {
 }
 export declare class GPTTokens {
     constructor(options: {
-        model: supportModelType;
-        messages: MessageItem[];
+        model?: supportModelType;
+        fineTuneModel?: string;
+        messages?: GPTTokens['messages'];
+        training?: GPTTokens['training'];
+        tools?: GPTTokens['tools'];
+        debug?: boolean;
     });
+    private checkOptions;
     static readonly supportModels: supportModelType[];
+    readonly debug: boolean;
     readonly model: supportModelType;
-    readonly messages: MessageItem[];
+    readonly fineTuneModel: string | undefined;
+    readonly messages?: MessageItem[];
+    readonly training?: {
+        data: {
+            messages: MessageItem[];
+        }[];
+        epochs: number;
+    };
+    readonly tools?: {
+        type: 'function';
+        function: {
+            name: string;
+            description?: string;
+            parameters: Record<string, unknown>;
+        };
+    }[];
     readonly gpt3_5_turboPromptTokenUnit: number;
     readonly gpt3_5_turboCompletionTokenUnit: number;
     readonly gpt3_5_turbo_16kPromptTokenUnit: number;
@@ -32,7 +53,14 @@ export declare class GPTTokens {
     readonly gpt4_32kCompletionTokenUnit: number;
     readonly gpt4_turbo_previewPromptTokenUnit: number;
     readonly gpt4_turbo_previewCompletionTokenUnit: number;
+    readonly gpt3_5_turbo_fine_tuneTrainingTokenUnit: number;
+    readonly gpt3_5_turbo_fine_tunePromptTokenUnit: number;
+    readonly gpt3_5_turbo_fine_tuneCompletionTokenUnit: number;
     get usedUSD(): number;
+    private trainingUsedUSD;
+    private functionUsedUSD;
+    private fineTuneUsedUSD;
+    private basicUsedTokens;
     get usedTokens(): number;
     get promptUsedTokens(): number;
     get completionUsedTokens(): number;
@@ -55,5 +83,5 @@ export declare class GPTTokens {
      */
     private static num_tokens_from_messages;
 }
-export declare function testGPTTokens(openai: OpenAI): Promise<void>;
+export declare function testGPTTokens(openai: OpenAI, prompt: string): Promise<void>;
 export {};
