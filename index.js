@@ -15,6 +15,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.testGPTTokens = exports.GPTTokens = exports.getEncodingForModelCached = void 0;
 const js_tiktoken_1 = require("js-tiktoken");
 const decimal_js_1 = __importDefault(require("decimal.js"));
+const openai_chat_tokens_1 = require("openai-chat-tokens");
 let modelEncodingCache = {};
 function getEncodingForModelCached(model) {
     if (!modelEncodingCache[model]) {
@@ -83,23 +84,117 @@ class GPTTokens {
         // gpt-4-1106-preview
         // Completion: $0.03 / 1K tokens
         this.gpt4_turbo_previewCompletionTokenUnit = new decimal_js_1.default(0.03).div(1000).toNumber();
-        const { model, messages, } = options;
-        if (!GPTTokens.supportModels.includes(model))
-            throw new Error(`Model ${model} is not supported`);
-        if (model === 'gpt-3.5-turbo')
-            this.warning(`${model} may update over time. Returning num tokens assuming gpt-3.5-turbo-0613`);
-        if (model === 'gpt-3.5-turbo-16k')
-            this.warning(`${model} may update over time. Returning num tokens assuming gpt-3.5-turbo-16k-0613`);
-        if (model === 'gpt-4')
-            this.warning(`${model} may update over time. Returning num tokens assuming gpt-4-0613`);
-        if (model === 'gpt-4-32k')
-            this.warning(`${model} may update over time. Returning num tokens assuming gpt-4-32k-0613`);
-        this.model = model;
+        // https://openai.com/pricing/
+        // Fine-tuning models gpt-3.5-turbo
+        // Training: $0.008 / 1K tokens
+        this.gpt3_5_turbo_fine_tuneTrainingTokenUnit = new decimal_js_1.default(0.008).div(1000).toNumber();
+        // https://openai.com/pricing/
+        // Fine-tuning models gpt-3.5-turbo
+        // Prompt: $0.003 / 1K tokens
+        this.gpt3_5_turbo_fine_tunePromptTokenUnit = new decimal_js_1.default(0.003).div(1000).toNumber();
+        // https://openai.com/pricing/
+        // Fine-tuning models gpt-3.5-turbo
+        // Completion: $0.006 / 1K tokens
+        this.gpt3_5_turbo_fine_tuneCompletionTokenUnit = new decimal_js_1.default(0.006).div(1000).toNumber();
+        const { model, fineTuneModel, messages, training, tools, debug = false, } = options;
+        this.model = model || (fineTuneModel === null || fineTuneModel === void 0 ? void 0 : fineTuneModel.split(':')[1]);
+        this.debug = debug;
+        this.fineTuneModel = fineTuneModel;
         this.messages = messages;
+        this.training = training;
+        this.tools = tools;
+        this.checkOptions();
+    }
+    checkOptions() {
+        if (!GPTTokens.supportModels.includes(this.model))
+            throw new Error(`Model ${this.model} is not supported`);
+        if (!this.messages && !this.training && !this.tools)
+            throw new Error('Must set on of messages | training | function');
+        if (this.fineTuneModel && !this.fineTuneModel.startsWith('ft:gpt'))
+            throw new Error(`Fine-tuning is not supported for ${this.fineTuneModel}`);
+        // https://platform.openai.com/docs/guides/fine-tuning
+        if (![
+            'gpt-3.5-turbo',
+            'gpt-3.5-turbo-0613',
+            'gpt-3.5-turbo-1106',
+            'gpt-4-0613',
+        ].includes(this.model) && this.training)
+            throw new Error(`Fine-tuning is not supported for model ${this.model}`);
+        // https://platform.openai.com/docs/guides/function-calling
+        if (![
+            'gpt-3.5-turbo',
+            'gpt-3.5-turbo-0613',
+            'gpt-3.5-turbo-1106',
+            'gpt-4',
+            'gpt-4-0613',
+            'gpt-4-1106-preview',
+        ].includes(this.model) && this.tools)
+            throw new Error(`Function is not supported for model ${this.model}`);
+        if (this.tools && !this.messages)
+            throw new Error('Function must set messages');
+        if (this.model === 'gpt-3.5-turbo')
+            this.warning(`${this.model} may update over time. Returning num tokens assuming gpt-3.5-turbo-1106`);
+        if (this.model === 'gpt-4')
+            this.warning(`${this.model} may update over time. Returning num tokens assuming gpt-4-0613`);
+        if (this.model === 'gpt-4-32k')
+            this.warning(`${this.model} may update over time. Returning num tokens assuming gpt-4-32k-0613`);
+        // old model
+        if ([
+            'gpt-3.5-turbo-0301',
+            'gpt-3.5-turbo-0613',
+            'gpt-3.5-turbo-16k',
+            'gpt-3.5-turbo-16k-0613',
+            'gpt-4-0314',
+            'gpt-4-32k-0314',
+        ].includes(this.model))
+            this.warning(`${this.model} is old model. Please migrating to replacements: https://platform.openai.com/docs/deprecations/`);
     }
     // Used USD
     get usedUSD() {
-        let price = 0;
+        if (this.training)
+            return this.trainingUsedUSD();
+        if (this.tools)
+            return this.functionUsedUSD();
+        if (this.fineTuneModel)
+            return this.fineTuneUsedUSD();
+        return this.basicUsedTokens();
+    }
+    trainingUsedUSD() {
+        return new decimal_js_1.default(this.usedTokens).mul(this.gpt3_5_turbo_fine_tuneTrainingTokenUnit).toNumber();
+    }
+    functionUsedUSD() {
+        if ([
+            'gpt-3.5-turbo',
+            'gpt-3.5-turbo-0613',
+        ].includes(this.model))
+            return new decimal_js_1.default(this.usedTokens)
+                .mul(this.gpt3_5_turboPromptTokenUnit).toNumber();
+        if ([
+            'gpt-3.5-turbo-1106',
+        ].includes(this.model))
+            return new decimal_js_1.default(this.usedTokens)
+                .mul(this.gpt3_5_turbo_1106PromptTokenUnit).toNumber();
+        if ([
+            'gpt-4',
+            'gpt-4-0613',
+        ].includes(this.model))
+            return new decimal_js_1.default(this.usedTokens)
+                .mul(this.gpt4_8kPromptTokenUnit).toNumber();
+        if ([
+            'gpt-4-1106-preview',
+        ].includes(this.model))
+            return new decimal_js_1.default(this.usedTokens)
+                .mul(this.gpt4_turbo_previewPromptTokenUnit).toNumber();
+        throw new Error(`Model ${this.model} is not supported`);
+    }
+    fineTuneUsedUSD() {
+        const promptUSD = new decimal_js_1.default(this.promptUsedTokens)
+            .mul(this.gpt3_5_turbo_fine_tunePromptTokenUnit);
+        const completionUSD = new decimal_js_1.default(this.completionUsedTokens)
+            .mul(this.gpt3_5_turbo_fine_tuneCompletionTokenUnit);
+        return promptUSD.add(completionUSD).toNumber();
+    }
+    basicUsedTokens() {
         if ([
             'gpt-3.5-turbo',
             'gpt-3.5-turbo-0301',
@@ -109,7 +204,7 @@ class GPTTokens {
                 .mul(this.gpt3_5_turboPromptTokenUnit);
             const completionUSD = new decimal_js_1.default(this.completionUsedTokens)
                 .mul(this.gpt3_5_turboCompletionTokenUnit);
-            price = promptUSD.add(completionUSD).toNumber();
+            return promptUSD.add(completionUSD).toNumber();
         }
         if ([
             'gpt-3.5-turbo-16k',
@@ -119,7 +214,7 @@ class GPTTokens {
                 .mul(this.gpt3_5_turbo_16kPromptTokenUnit);
             const completionUSD = new decimal_js_1.default(this.completionUsedTokens)
                 .mul(this.gpt3_5_turbo_16kCompletionTokenUnit);
-            price = promptUSD.add(completionUSD).toNumber();
+            return promptUSD.add(completionUSD).toNumber();
         }
         if ([
             'gpt-3.5-turbo-1106',
@@ -128,7 +223,7 @@ class GPTTokens {
                 .mul(this.gpt3_5_turbo_1106PromptTokenUnit);
             const completionUSD = new decimal_js_1.default(this.completionUsedTokens)
                 .mul(this.gpt3_5_turbo_1106CompletionTokenUnit);
-            price = promptUSD.add(completionUSD).toNumber();
+            return promptUSD.add(completionUSD).toNumber();
         }
         if ([
             'gpt-4',
@@ -139,7 +234,7 @@ class GPTTokens {
                 .mul(this.gpt4_8kPromptTokenUnit);
             const completionUSD = new decimal_js_1.default(this.completionUsedTokens)
                 .mul(this.gpt4_8kCompletionTokenUnit);
-            price = promptUSD.add(completionUSD).toNumber();
+            return promptUSD.add(completionUSD).toNumber();
         }
         if ([
             'gpt-4-32k',
@@ -150,20 +245,34 @@ class GPTTokens {
                 .mul(this.gpt4_32kPromptTokenUnit);
             const completionUSD = new decimal_js_1.default(this.completionUsedTokens)
                 .mul(this.gpt4_32kCompletionTokenUnit);
-            price = promptUSD.add(completionUSD).toNumber();
+            return promptUSD.add(completionUSD).toNumber();
         }
         if (this.model === 'gpt-4-1106-preview') {
             const promptUSD = new decimal_js_1.default(this.promptUsedTokens)
                 .mul(this.gpt4_turbo_previewPromptTokenUnit);
             const completionUSD = new decimal_js_1.default(this.completionUsedTokens)
                 .mul(this.gpt4_turbo_previewCompletionTokenUnit);
-            price = promptUSD.add(completionUSD).toNumber();
+            return promptUSD.add(completionUSD).toNumber();
         }
-        return price;
+        throw new Error(`Model ${this.model} is not supported`);
     }
     // Used Tokens (total)
     get usedTokens() {
-        return this.promptUsedTokens + this.completionUsedTokens;
+        if (this.training)
+            return this.training.data
+                .map(({ messages }) => new GPTTokens({
+                model: this.model,
+                messages,
+            }).usedTokens + 2)
+                .reduce((a, b) => a + b, 0) * this.training.epochs;
+        if (this.tools)
+            return (0, openai_chat_tokens_1.promptTokensEstimate)({
+                messages: this.messages,
+                functions: this.tools.map(item => item.function),
+            });
+        if (this.messages)
+            return this.promptUsedTokens + this.completionUsedTokens;
+        return 0;
     }
     // Used Tokens (prompt)
     get promptUsedTokens() {
@@ -197,6 +306,8 @@ class GPTTokens {
      * @returns void
      */
     warning(message) {
+        if (!this.debug)
+            return;
         console.warn('Warning:', message);
     }
     /**
@@ -239,6 +350,8 @@ class GPTTokens {
         for (const message of messages) {
             num_tokens += tokens_per_message;
             for (const [key, value] of Object.entries(message)) {
+                if (typeof value !== 'string')
+                    continue;
                 num_tokens += encoding.encode(value).length;
                 if (key === 'name') {
                     num_tokens += tokens_per_name;
@@ -251,6 +364,7 @@ class GPTTokens {
         return num_tokens + 3;
     }
 }
+exports.GPTTokens = GPTTokens;
 GPTTokens.supportModels = [
     'gpt-3.5-turbo-0301',
     'gpt-3.5-turbo',
@@ -266,10 +380,8 @@ GPTTokens.supportModels = [
     'gpt-4-32k-0613',
     'gpt-4-1106-preview',
 ];
-exports.GPTTokens = GPTTokens;
-function testGPTTokens(openai) {
+function testGPTTokens(openai, prompt) {
     return __awaiter(this, void 0, void 0, function* () {
-        const prompt = `How are u`;
         const messages = [
             { role: 'user', content: prompt },
         ];
