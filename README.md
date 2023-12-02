@@ -13,65 +13,134 @@ npm install gpt-tokens
 yarn add gpt-tokens
 ```
 
-### Usage
+## Support
+
+### Basic Models
+
+* gpt-3.5-turbo
+* gpt-3.5-turbo-0301
+* gpt-3.5-turbo-0613
+* gpt-3.5-turbo-1106
+* gpt-3.5-turbo-16k
+* gpt-3.5-turbo-16k-0613
+* gpt-4
+* gpt-4-0314
+* gpt-4-0613
+* gpt-4-32k  (Not tested)
+* gpt-4-32k-0314  (Not tested)
+* gpt-4-32k-0613  (Not tested)
+* gpt-4-1106-preview
+
+### Fine Tune Models
+
+* ft:gpt-3.5-turbo:xxx
+* ft:gpt-3.5-turbo-1106:xxx
+* ft:gpt-3.5-turbo-0613:xxx
+* ft:gpt-4:xxx (Not tested)
+
+### Others
+
+* Fine tune training (Not rigorously tested)
+* Function calling (Not rigorously tested)
+
+## Usage
+
+### Basic chat messages
 
 ```typescript
 import { GPTTokens } from 'gpt-tokens'
 
 const usageInfo = new GPTTokens({
-    model   : 'gpt-3.5-turbo-0613',
+    model   : 'gpt-3.5-turbo-1106',
     messages: [
+        { 'role' :'system', 'content': 'You are a helpful, pattern-following assistant that translates corporate jargon into plain English.' },
+        { 'role' :'user',   'content': 'This late pivot means we don\'t have time to boil the ocean for the client deliverable.' },
+    ]
+})
+
+console.info('Used tokens: ', usageInfo.usedTokens)
+console.info('Used USD: ',    usageInfo.usedUSD)
+```
+
+### Fine tune training
+
+```typescript
+import { GPTTokens } from 'gpt-tokens'
+
+const usageInfo = new GPTTokens({
+    model   : 'gpt-3.5-turbo-1106',
+    training: {
+        data  : fs
+                .readFileSync(filepath, 'utf-8')
+                .split('\n')
+                .filter(Boolean)
+                .map(row => JSON.parse(row)),
+        epochs: 7,
+    },
+})
+
+console.info('Used tokens: ', usageInfo.usedTokens)
+console.info('Used USD: ',    usageInfo.usedUSD)
+```
+
+### Fine tune chat messages
+
+```typescript
+import { GPTTokens } from 'gpt-tokens'
+
+const usageInfo = new GPTTokens({
+    fineTuneModel: 'ft:gpt-3.5-turbo-1106:opensftp::8IWeqPit',
+    messages     : [
+        { role: 'system', content: 'You are a helpful assistant.' },
+    ],
+})
+
+console.info('Used tokens: ', usageInfo.usedTokens)
+console.info('Used USD: ',    usageInfo.usedUSD)
+```
+
+### Function calling
+
+```typescript
+import { GPTTokens } from 'gpt-tokens'
+
+const usageInfo = new GPTTokens({
+    model   : 'gpt-3.5-turbo-1106',
+    messages: [
+        { role: 'user', content: 'What\'s the weather like in San Francisco and Paris?' },
+    ],
+    tools   : [
         {
-            'role'   : 'system',
-            'content': 'You are a helpful, pattern-following assistant that translates corporate jargon into plain English.',
-        },
-        {
-            'role'   : 'system',
-            'name'   : 'example_user',
-            'content': 'New synergies will help drive top-line growth.',
-        },
-        {
-            'role'   : 'system',
-            'name'   : 'example_assistant',
-            'content': 'Things working well together will increase revenue.',
-        },
-        {
-            'role'   : 'system',
-            'name'   : 'example_user',
-            'content': 'Let\'s circle back when we have more bandwidth to touch base on opportunities for increased leverage.',
-        },
-        {
-            'role'   : 'system',
-            'name'   : 'example_assistant',
-            'content': 'Let\'s talk later when we\'re less busy about how to do better.',
-        },
-        {
-            'role'   : 'user',
-            'content': 'This late pivot means we don\'t have time to boil the ocean for the client deliverable.',
-        },
-        {
-            'role'   : 'assistant',
-            'content': 'This last-minute change means we don\'t have enough time to complete the entire project for the client.',
+            type    : 'function',
+            function: {
+                name       : 'get_current_weather',
+                description: 'Get the current weather in a given location',
+                parameters : {
+                    type      : 'object',
+                    properties: {
+                        location: {
+                            type       : 'string',
+                            description: 'The city and state, e.g. San Francisco, CA',
+                        },
+                        unit    : {
+                            type: 'string',
+                            enum: ['celsius', 'fahrenheit'],
+                        },
+                    },
+                    required  : ['location'],
+                },
+            },
         },
     ]
 })
 
-// ┌───────────────────┬────────┐
-// │      (index)      │ Values │
-// ├───────────────────┼────────┤
-// │   Tokens prompt   │  129   │
-// │ Tokens completion │   20   │
-// │   Tokens total    │  149   │
-// └───────────────────┴────────┘
-console.table({
-    'Tokens prompt'    : usageInfo.promptUsedTokens,
-    'Tokens completion': usageInfo.completionUsedTokens,
-    'Tokens total'     : usageInfo.usedTokens,
-})
-
-// Price USD:  0.000298
-console.log('Price USD: ', usageInfo.usedUSD)
+console.info('Used tokens: ', usageInfo.usedTokens)
+console.info('Used USD: ',    usageInfo.usedUSD)
 ```
+
+## Calculation method
+
+### Basic chat messages
 
 > Tokens calculation rules for prompt and completion:
 >
@@ -83,23 +152,13 @@ Verify the function above in [openai-cookbook](https://github.com/openai/openai-
 
 ![openai-cookbook.png](openai-cookbook.png)
 
-## Support Models
+### Function calling
 
-* gpt-3.5-turbo
-* gpt-3.5-turbo-0301
-* gpt-3.5-turbo-0613
-* gpt-3.5-turbo-1106
-* gpt-3.5-turbo-16k
-* gpt-3.5-turbo-16k-0613
-* gpt-4
-* gpt-4-0314
-* gpt-4-0613
-* gpt-4-32k
-* gpt-4-32k-0314
-* gpt-4-32k-0613
-* gpt-4-1106-preview
+Thanks for hmarr
 
-Test in your project
+https://hmarr.com/blog/counting-openai-tokens/
+
+## Test in your project
 
 ```bash
 node test.js yourAPIKey
@@ -152,3 +211,4 @@ node test.js yourAPIKey
 ## Dependencies
 
 - [js-tiktoken](https://github.com/dqbd/tiktoken)
+- [openai-chat-tokens](https://github.com/hmarr/openai-chat-tokens#readme)

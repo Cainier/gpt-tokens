@@ -11,18 +11,20 @@ if (!apiKey) {
 
 const openai = new OpenAI({ apiKey })
 
-async function basic (prompt) {
+async function testBasic(prompt) {
     console.info('Testing GPT...')
 
     await testGPTTokens(openai, prompt)
 }
 
-function fineTune (filepath) {
+function testTraining(filepath) {
     console.info('Testing Create a fine-tuned model...')
 
-    console.log(new GPTTokens({
+    const openaiUsedTokens = 4445
+
+    const gptTokens = new GPTTokens({
         model   : 'gpt-3.5-turbo-1106',
-        fineTune: {
+        training: {
             data  : fs
                 .readFileSync(filepath, 'utf-8')
                 .split('\n')
@@ -30,10 +32,14 @@ function fineTune (filepath) {
                 .map(row => JSON.parse(row)),
             epochs: 7,
         },
-    }).usedTokens)
+    })
+
+    if (gptTokens.usedTokens !== openaiUsedTokens) throw new Error(`Test training usedTokens failed (openai: ${openaiUsedTokens}/ gpt-tokens: ${gptTokens.usedTokens})`)
+
+    console.info('Pass!')
 }
 
-function performance (messages) {
+function testPerformance(messages) {
     console.info('Testing performance...')
     console.info('Messages:', JSON.stringify(messages))
 
@@ -55,275 +61,275 @@ function performance (messages) {
     }
 }
 
-async function functionCalling1 () {
-    // https://platform.openai.com/docs/guides/function-calling
+async function testFunctionCalling() {
+    console.info('Testing function calling...')
 
-    // Example dummy function hard coded to return the same weather
-    // In production, this could be your backend API or an external API
-    function getCurrentWeather (location, unit = 'fahrenheit') {
-        if (location.toLowerCase().includes('tokyo')) {
-            return JSON.stringify({ location: 'Tokyo', temperature: '10', unit: 'celsius' })
-        } else if (location.toLowerCase().includes('san francisco')) {
-            return JSON.stringify({ location: 'San Francisco', temperature: '72', unit: 'fahrenheit' })
-        } else if (location.toLowerCase().includes('paris')) {
-            return JSON.stringify({ location: 'Paris', temperature: '22', unit: 'fahrenheit' })
-        } else {
-            return JSON.stringify({ location, temperature: 'unknown' })
+    await Promise.all([
+        functionCalling1(),
+        functionCalling2(),
+    ])
+
+    console.info('Pass!')
+
+    async function functionCalling1() {
+        // https://platform.openai.com/docs/guides/function-calling
+
+        // Example dummy function hard coded to return the same weather
+        // In production, this could be your backend API or an external API
+        function getCurrentWeather(location, unit = 'fahrenheit') {
+            if (location.toLowerCase().includes('tokyo')) {
+                return JSON.stringify({ location: 'Tokyo', temperature: '10', unit: 'celsius' })
+            } else if (location.toLowerCase().includes('san francisco')) {
+                return JSON.stringify({ location: 'San Francisco', temperature: '72', unit: 'fahrenheit' })
+            } else if (location.toLowerCase().includes('paris')) {
+                return JSON.stringify({ location: 'Paris', temperature: '22', unit: 'fahrenheit' })
+            } else {
+                return JSON.stringify({ location, temperature: 'unknown' })
+            }
         }
-    }
 
-    async function runConversation () {
-        // Step 1: send the conversation and available functions to the model
-        const messages = [
-            { role: 'user', content: 'What\'s the weather like in San Francisco and Paris?' },
-        ]
-
-        const tools = [
-            {
-                type    : 'function',
-                function: {
-                    name       : 'get_current_weather',
-                    description: 'Get the current weather in a given location',
-                    parameters : {
-                        type      : 'object',
-                        properties: {
-                            location: {
-                                type       : 'string',
-                                description: 'The city and state, e.g. San Francisco, CA',
+        async function runConversation() {
+            // Step 1: send the conversation and available functions to the model
+            const model    = 'gpt-3.5-turbo-1106'
+            const messages = [
+                { role: 'user', content: 'What\'s the weather like in San Francisco and Paris?' },
+            ]
+            const tools    = [
+                {
+                    type    : 'function',
+                    function: {
+                        name       : 'get_current_weather',
+                        description: 'Get the current weather in a given location',
+                        parameters : {
+                            type      : 'object',
+                            properties: {
+                                location: {
+                                    type       : 'string',
+                                    description: 'The city and state, e.g. San Francisco, CA',
+                                },
+                                unit    : {
+                                    type: 'string',
+                                    enum: ['celsius', 'fahrenheit'],
+                                },
                             },
-                            unit    : {
-                                type: 'string',
-                                enum: ['celsius', 'fahrenheit'],
-                            },
+                            required  : ['location'],
                         },
-                        required  : ['location'],
                     },
                 },
-            },
-        ]
+            ]
 
-        console.log('Step-1 messages:', messages)
+            const response = await openai.chat.completions.create({
+                model,
+                messages,
+                tools,
+                tool_choice: 'auto', // auto is default, but we'll be explicit
+            })
 
-        const response = await openai.chat.completions.create({
-            model      : 'gpt-3.5-turbo-1106',
-            messages   : messages,
-            tools      : tools,
-            tool_choice: 'auto', // auto is default, but we'll be explicit
-        })
+            const { usage: openaiUsage } = response
 
-        console.log('Step-1 response:', response)
+            const gptTokens = new GPTTokens({
+                model,
+                messages,
+                tools,
+            })
 
-        const responseMessage = response.choices[0].message
+            if (gptTokens.usedTokens !== openaiUsage.prompt_tokens)
+                throw new Error(`Test function calling promptUsedTokens failed (openai: ${openaiUsage.prompt_tokens}/ gpt-tokens: ${gptTokens.usedTokens})`)
 
-        console.log('responseMessage', responseMessage, JSON.stringify(responseMessage))
+            const responseMessage = response.choices[0].message
 
-        // {
-        //     "role": "assistant",
-        //     "content": null,
-        //     "tool_calls": [
-        //     {
-        //         "id": "call_NjQ2zj1ULj7pj7rD08Tg1hCm",
-        //         "type": "function",
-        //         "function": {
-        //             "name": "get_current_weather",
-        //             "arguments": "{\"location\": \"San Francisco\", \"unit\": \"celsius\"}"
-        //         }
-        //     },
-        //     {
-        //         "id": "call_2yggi4Lawuxe0zYZqLu8VlnL",
-        //         "type": "function",
-        //         "function": {
-        //             "name": "get_current_weather",
-        //             "arguments": "{\"location\": \"Tokyo\", \"unit\": \"celsius\"}"
-        //         }
-        //     },
-        //     {
-        //         "id": "call_n4EtB9q8yuMcRRfRM3FpNBFI",
-        //         "type": "function",
-        //         "function": {
-        //             "name": "get_current_weather",
-        //             "arguments": "{\"location\": \"Paris\", \"unit\": \"celsius\"}"
-        //         }
-        //     }
-        // ]
-        // }
+            // Step 2: check if the model wanted to call a function
+            const toolCalls = responseMessage.tool_calls
 
-        // Step 2: check if the model wanted to call a function
-        const toolCalls = responseMessage.tool_calls
+            if (responseMessage.tool_calls) {
+                // Step 3: call the function
+                // Note: the JSON response may not always be valid; be sure to handle errors
 
-        console.log('toolCalls', toolCalls, JSON.stringify(toolCalls))
+                const availableFunctions = {
+                    get_current_weather: getCurrentWeather,
+                } // only one function in this example, but you can have multiple
 
-        if (responseMessage.tool_calls) {
-            // Step 3: call the function
-            // Note: the JSON response may not always be valid; be sure to handle errors
+                messages.push(responseMessage) // extend conversation with assistant's reply
 
-            const availableFunctions = {
-                get_current_weather: getCurrentWeather,
-            } // only one function in this example, but you can have multiple
+                for (const toolCall of toolCalls) {
+                    const functionName     = toolCall.function.name
+                    const functionToCall   = availableFunctions[functionName]
+                    const functionArgs     = JSON.parse(toolCall.function.arguments)
+                    const functionResponse = functionToCall(
+                        functionArgs.location,
+                        functionArgs.unit,
+                    )
 
-            messages.push(responseMessage) // extend conversation with assistant's reply
+                    messages.push({
+                        tool_call_id: toolCall.id,
+                        role        : 'tool',
+                        name        : functionName,
+                        content     : functionResponse,
+                    }) // extend conversation with function response
+                }
 
-            for (const toolCall of toolCalls) {
-                const functionName     = toolCall.function.name
-                const functionToCall   = availableFunctions[functionName]
-                const functionArgs     = JSON.parse(toolCall.function.arguments)
-                const functionResponse = functionToCall(
-                    functionArgs.location,
-                    functionArgs.unit,
-                )
+                const secondResponse = await openai.chat.completions.create({
+                    model   : 'gpt-3.5-turbo-1106',
+                    messages: messages,
+                }) // get a new response from the model where it can see the function response
 
-                messages.push({
-                    tool_call_id: toolCall.id,
-                    role        : 'tool',
-                    name        : functionName,
-                    content     : functionResponse,
-                }) // extend conversation with function response
+                return secondResponse.choices
             }
-
-            console.log('Step-2 messages:', messages)
-
-            const secondResponse = await openai.chat.completions.create({
-                model   : 'gpt-3.5-turbo-1106',
-                messages: messages,
-            }) // get a new response from the model where it can see the function response
-
-            console.log('Step-2 response:', secondResponse)
-
-            return secondResponse.choices
         }
+
+        await runConversation()
     }
 
-    runConversation().then(console.log).catch(console.error)
-}
+    async function functionCalling2() {
+        // https://platform.openai.com/docs/guides/function-calling
 
-async function functionCalling2 () {
-    // https://platform.openai.com/docs/guides/function-calling
+        // Example dummy function hard coded to return the same weather
+        // In production, this could be your backend API or an external API
+        function getProductPrice(store, product) {
+            return JSON.stringify({
+                store,
+                product,
+                price: (Math.random() * 1000).toFixed(0),
+                unit : '$',
+            })
+        }
 
-    // Example dummy function hard coded to return the same weather
-    // In production, this could be your backend API or an external API
-    function getProductPrice (store, product) {
-        return JSON.stringify({
-            store: store.toUpperCase(),
-            product,
-            price: (Math.random() * 100).toFixed(0),
-            unit : '$',
-        })
-    }
+        async function runConversation() {
+            // Step 1: send the conversation and available functions to the model
+            const model    = 'gpt-3.5-turbo-1106'
+            const messages = [
+                { role: 'user', content: 'ps5 price in all stores' },
+            ]
 
-    async function runConversation () {
-        // Step 1: send the conversation and available functions to the model
-        const messages = [
-            { role: 'user', content: 'ps5 price in all stores' },
-        ]
-
-        const tools = [
-            {
-                type    : 'function',
-                function: {
-                    name       : 'get_product_price',
-                    description: 'Get the price of an item in a specified store',
-                    parameters : {
-                        type      : 'object',
-                        properties: {
-                            store  : {
-                                type       : 'string',
-                                description: 'The store name',
-                                enum       : ['Amazon', 'Ebay', 'TaoBao'],
+            const tools = [
+                {
+                    type    : 'function',
+                    function: {
+                        name       : 'get_product_price',
+                        description: 'Get the price of an item in a specified store',
+                        parameters : {
+                            type      : 'object',
+                            properties: {
+                                store  : {
+                                    type       : 'string',
+                                    description: 'The store name',
+                                    enum       : ['Amazon', 'Ebay', 'TaoBao'],
+                                },
+                                product: {
+                                    type       : 'string',
+                                    description: 'The product name e.g. MacbookPro',
+                                },
                             },
-                            product: {
-                                type       : 'string',
-                                description: 'The product name e.g. MacbookPro',
-                            },
+                            required  : ['product'],
                         },
-                        required  : ['product'],
                     },
                 },
-            },
-        ]
+            ]
 
-        console.log('Step-1 messages:', messages)
+            const response = await openai.chat.completions.create({
+                model,
+                messages,
+                tools,
+                tool_choice: 'auto', // auto is default, but we'll be explicit
+            })
 
-        const response = await openai.chat.completions.create({
-            model      : 'gpt-3.5-turbo-1106',
-            messages   : messages,
-            tools      : tools,
-            tool_choice: 'auto', // auto is default, but we'll be explicit
-        })
+            const { usage: openaiUsage } = response
 
-        console.log('Step-1 response:', response)
+            const gptTokens = new GPTTokens({
+                model,
+                messages,
+                tools,
+            })
 
-        const responseMessage = response.choices[0].message
+            if (gptTokens.usedTokens !== openaiUsage.prompt_tokens)
+                throw new Error(`Test function calling promptUsedTokens failed (openai: ${openaiUsage.prompt_tokens}/ gpt-tokens: ${gptTokens.usedTokens})`)
 
-        console.log('responseMessage', responseMessage, JSON.stringify(responseMessage))
 
-        // Step 2: check if the model wanted to call a function
-        const toolCalls = responseMessage.tool_calls
+            const responseMessage = response.choices[0].message
 
-        console.log('toolCalls', toolCalls, JSON.stringify(toolCalls))
+            // Step 2: check if the model wanted to call a function
+            const toolCalls = responseMessage.tool_calls
 
-        if (responseMessage.tool_calls) {
-            // Step 3: call the function
-            // Note: the JSON response may not always be valid; be sure to handle errors
+            if (responseMessage.tool_calls) {
+                // Step 3: call the function
+                // Note: the JSON response may not always be valid; be sure to handle errors
 
-            const availableFunctions = {
-                get_product_price: getProductPrice,
-            } // only one function in this example, but you can have multiple
+                const availableFunctions = {
+                    get_product_price: getProductPrice,
+                } // only one function in this example, but you can have multiple
 
-            messages.push(responseMessage) // extend conversation with assistant's reply
+                messages.push(responseMessage) // extend conversation with assistant's reply
 
-            for (const toolCall of toolCalls) {
-                const functionName     = toolCall.function.name
-                const functionToCall   = availableFunctions[functionName]
-                const functionArgs     = JSON.parse(toolCall.function.arguments)
-                const functionResponse = functionToCall(
-                    functionArgs.store,
-                    functionArgs.product,
-                    functionArgs.unit,
-                )
+                for (const toolCall of toolCalls) {
+                    const functionName     = toolCall.function.name
+                    const functionToCall   = availableFunctions[functionName]
+                    const functionArgs     = JSON.parse(toolCall.function.arguments)
+                    const functionResponse = functionToCall(
+                        functionArgs.store,
+                        functionArgs.product,
+                        functionArgs.unit,
+                    )
 
-                messages.push({
-                    tool_call_id: toolCall.id,
-                    role        : 'tool',
-                    name        : functionName,
-                    content     : functionResponse,
-                }) // extend conversation with function response
+                    messages.push({
+                        tool_call_id: toolCall.id,
+                        role        : 'tool',
+                        name        : functionName,
+                        content     : functionResponse,
+                    }) // extend conversation with function response
+                }
+
+                const secondResponse = await openai.chat.completions.create({
+                    model   : 'gpt-3.5-turbo-1106',
+                    messages: messages,
+                }) // get a new response from the model where it can see the function response
+
+                return secondResponse.choices
             }
-
-            console.log('Step-2 messages:', messages)
-
-            const secondResponse = await openai.chat.completions.create({
-                model   : 'gpt-3.5-turbo-1106',
-                messages: messages,
-            }) // get a new response from the model where it can see the function response
-
-            console.log('Step-2 response:', secondResponse)
-
-            return secondResponse.choices
         }
-    }
 
-    runConversation().then(console.log).catch(console.error)
+        await runConversation()
+    }
 }
 
-async function start () {
-    await basic('How are u')
+async function testFineTune() {
+    console.info('Testing fine-tune...')
 
-    fineTune('./fine-tuning-data.jsonl')
+    const model    = 'ft:gpt-3.5-turbo-1106:opensftp::8IWeqPit'
+    const messages = [{ role: 'system', content: 'You are a helpful assistant.' }]
 
-    performance([
+    const completion = await openai.chat.completions.create({
+        messages,
+        model,
+    })
+
+    const { usage: openaiUsage } = completion
+
+    const gptTokens = new GPTTokens({
+        fineTuneModel: model,
+        messages,
+    })
+
+    if (gptTokens.usedTokens !== openaiUsage.prompt_tokens)
+        throw new Error(`Test fine-tune promptUsedTokens failed (openai: ${openaiUsage.prompt_tokens}/ gpt-tokens: ${gptTokens.usedTokens})`)
+
+    console.info('Pass!')
+}
+
+async function start() {
+    await testBasic('How are u')
+
+    await testFunctionCalling()
+
+    await testFineTune()
+
+    testTraining('./fine-tuning-data.jsonl')
+
+    testPerformance([
         {
             role   : 'user',
             content: 'Hello world',
         },
     ])
-
-    // TODO: Test function calling
-
-    await functionCalling1()
-
-    await functionCalling2()
-
-    // TODO: Test fine-tune
 }
 
 start().then()

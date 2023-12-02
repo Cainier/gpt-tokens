@@ -97,14 +97,6 @@ class GPTTokens {
         // Completion: $0.006 / 1K tokens
         this.gpt3_5_turbo_fine_tuneCompletionTokenUnit = new decimal_js_1.default(0.006).div(1000).toNumber();
         const { model, fineTuneModel, messages, training, tools, debug = false, } = options;
-        if (model === 'gpt-3.5-turbo')
-            this.warning(`${model} may update over time. Returning num tokens assuming gpt-3.5-turbo-0613`);
-        if (model === 'gpt-3.5-turbo-16k')
-            this.warning(`${model} may update over time. Returning num tokens assuming gpt-3.5-turbo-16k-0613`);
-        if (model === 'gpt-4')
-            this.warning(`${model} may update over time. Returning num tokens assuming gpt-4-0613`);
-        if (model === 'gpt-4-32k')
-            this.warning(`${model} may update over time. Returning num tokens assuming gpt-4-32k-0613`);
         this.model = model || (fineTuneModel === null || fineTuneModel === void 0 ? void 0 : fineTuneModel.split(':')[1]);
         this.debug = debug;
         this.fineTuneModel = fineTuneModel;
@@ -140,6 +132,22 @@ class GPTTokens {
             throw new Error(`Function is not supported for model ${this.model}`);
         if (this.tools && !this.messages)
             throw new Error('Function must set messages');
+        if (this.model === 'gpt-3.5-turbo')
+            this.warning(`${this.model} may update over time. Returning num tokens assuming gpt-3.5-turbo-1106`);
+        if (this.model === 'gpt-4')
+            this.warning(`${this.model} may update over time. Returning num tokens assuming gpt-4-0613`);
+        if (this.model === 'gpt-4-32k')
+            this.warning(`${this.model} may update over time. Returning num tokens assuming gpt-4-32k-0613`);
+        // old model
+        if ([
+            'gpt-3.5-turbo-0301',
+            'gpt-3.5-turbo-0613',
+            'gpt-3.5-turbo-16k',
+            'gpt-3.5-turbo-16k-0613',
+            'gpt-4-0314',
+            'gpt-4-32k-0314',
+        ].includes(this.model))
+            this.warning(`${this.model} is old model. Please migrating to replacements: https://platform.openai.com/docs/deprecations/`);
     }
     // Used USD
     get usedUSD() {

@@ -66,15 +66,6 @@ export class GPTTokens {
                   debug = false,
               } = options
 
-        if (model === 'gpt-3.5-turbo')
-            this.warning(`${ model } may update over time. Returning num tokens assuming gpt-3.5-turbo-0613`)
-        if (model === 'gpt-3.5-turbo-16k')
-            this.warning(`${ model } may update over time. Returning num tokens assuming gpt-3.5-turbo-16k-0613`)
-        if (model === 'gpt-4')
-            this.warning(`${ model } may update over time. Returning num tokens assuming gpt-4-0613`)
-        if (model === 'gpt-4-32k')
-            this.warning(`${ model } may update over time. Returning num tokens assuming gpt-4-32k-0613`)
-
         this.model         = model || fineTuneModel?.split(':')[1] as supportModelType
         this.debug         = debug
         this.fineTuneModel = fineTuneModel
@@ -87,13 +78,13 @@ export class GPTTokens {
 
     private checkOptions () {
         if (!GPTTokens.supportModels.includes(this.model))
-            throw new Error(`Model ${ this.model } is not supported`)
+            throw new Error(`Model ${this.model} is not supported`)
 
         if (!this.messages && !this.training && !this.tools)
             throw new Error('Must set on of messages | training | function')
 
-        if (this.fineTuneModel && !this.fineTuneModel.startsWith('ft:gpt-3.5-turbo'))
-            throw new Error(`Fine-tuning is not supported for ${ this.fineTuneModel }`)
+        if (this.fineTuneModel && !this.fineTuneModel.startsWith('ft:gpt'))
+            throw new Error(`Fine-tuning is not supported for ${this.fineTuneModel}`)
 
         // https://platform.openai.com/docs/guides/fine-tuning
         if (![
@@ -102,7 +93,7 @@ export class GPTTokens {
             'gpt-3.5-turbo-1106',
             'gpt-4-0613',
         ].includes(this.model) && this.training)
-            throw new Error(`Fine-tuning is not supported for model ${ this.model }`)
+            throw new Error(`Fine-tuning is not supported for model ${this.model}`)
 
         // https://platform.openai.com/docs/guides/function-calling
         if (![
@@ -113,10 +104,30 @@ export class GPTTokens {
             'gpt-4-0613',
             'gpt-4-1106-preview',
         ].includes(this.model) && this.tools)
-            throw new Error(`Function is not supported for model ${ this.model }`)
+            throw new Error(`Function is not supported for model ${this.model}`)
 
         if (this.tools && !this.messages)
             throw new Error('Function must set messages')
+
+        if (this.model === 'gpt-3.5-turbo')
+            this.warning(`${this.model} may update over time. Returning num tokens assuming gpt-3.5-turbo-1106`)
+
+        if (this.model === 'gpt-4')
+            this.warning(`${this.model} may update over time. Returning num tokens assuming gpt-4-0613`)
+
+        if (this.model === 'gpt-4-32k')
+            this.warning(`${this.model} may update over time. Returning num tokens assuming gpt-4-32k-0613`)
+
+        // old model
+
+        if ([
+            'gpt-3.5-turbo-0301',
+            'gpt-3.5-turbo-0613',
+            'gpt-3.5-turbo-16k',
+            'gpt-3.5-turbo-16k-0613',
+            'gpt-4-0314',
+            'gpt-4-32k-0314',
+        ].includes(this.model)) this.warning(`${this.model} is old model. Please migrating to replacements: https://platform.openai.com/docs/deprecations/`)
     }
 
     public static readonly supportModels: supportModelType [] = [
@@ -267,7 +278,7 @@ export class GPTTokens {
         ].includes(this.model)) return new Decimal(this.usedTokens)
             .mul(this.gpt4_turbo_previewPromptTokenUnit).toNumber()
 
-        throw new Error(`Model ${ this.model } is not supported`)
+        throw new Error(`Model ${this.model} is not supported`)
     }
 
     private fineTuneUsedUSD () {
@@ -351,7 +362,7 @@ export class GPTTokens {
             return promptUSD.add(completionUSD).toNumber()
         }
 
-        throw new Error(`Model ${ this.model } is not supported`)
+        throw new Error(`Model ${this.model} is not supported`)
     }
 
     // Used Tokens (total)
@@ -488,7 +499,7 @@ export async function testGPTTokens (openai: OpenAI, prompt: string) {
     for (let i = 0; i < modelsNum; i += 1) {
         const model = GPTTokens.supportModels[i]
 
-        console.info(`[${ i + 1 }/${ modelsNum }]: Testing ${ model }...`)
+        console.info(`[${i + 1}/${modelsNum}]: Testing ${model}...`)
 
         let ignoreModel = false
 
@@ -499,7 +510,7 @@ export async function testGPTTokens (openai: OpenAI, prompt: string) {
             .catch(err => {
                 ignoreModel = true
 
-                console.info(`Ignore model ${ model }:`, err.message)
+                console.info(`Ignore model ${model}:`, err.message)
             })
 
         const openaiUsage = chatCompletion?.usage
@@ -515,18 +526,18 @@ export async function testGPTTokens (openai: OpenAI, prompt: string) {
         if (ignoreModel) continue
 
         if (!openaiUsage) {
-            console.error(`Test ${ model } failed (openai return usage is null)`)
+            console.error(`Test ${model} failed (openai return usage is null)`)
             continue
         }
 
         if (gptTokens.promptUsedTokens !== openaiUsage.prompt_tokens)
-            throw new Error(`Test ${ model } promptUsedTokens failed (openai: ${ openaiUsage.prompt_tokens }/ gpt-tokens: ${ gptTokens.promptUsedTokens })`)
+            throw new Error(`Test ${model} promptUsedTokens failed (openai: ${openaiUsage.prompt_tokens}/ gpt-tokens: ${gptTokens.promptUsedTokens})`)
 
         if (gptTokens.completionUsedTokens !== openaiUsage.completion_tokens)
-            throw new Error(`Test ${ model } completionUsedTokens failed (openai: ${ openaiUsage.completion_tokens }/ gpt-tokens: ${ gptTokens.completionUsedTokens })`)
+            throw new Error(`Test ${model} completionUsedTokens failed (openai: ${openaiUsage.completion_tokens}/ gpt-tokens: ${gptTokens.completionUsedTokens})`)
 
         if (gptTokens.usedTokens !== openaiUsage?.total_tokens)
-            throw new Error(`Test ${ model } usedTokens failed (openai: ${ openaiUsage?.total_tokens }/ gpt-tokens: ${ gptTokens.usedTokens })`)
+            throw new Error(`Test ${model} usedTokens failed (openai: ${openaiUsage?.total_tokens}/ gpt-tokens: ${gptTokens.usedTokens})`)
 
         console.info('Pass!')
     }
