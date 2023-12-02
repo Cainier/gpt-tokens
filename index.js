@@ -110,7 +110,7 @@ class GPTTokens {
             throw new Error(`Model ${this.model} is not supported`);
         if (!this.messages && !this.training && !this.tools)
             throw new Error('Must set on of messages | training | function');
-        if (this.fineTuneModel && !this.fineTuneModel.startsWith('ft:gpt-3.5-turbo'))
+        if (this.fineTuneModel && !this.fineTuneModel.startsWith('ft:gpt'))
             throw new Error(`Fine-tuning is not supported for ${this.fineTuneModel}`);
         // https://platform.openai.com/docs/guides/fine-tuning
         if (![
