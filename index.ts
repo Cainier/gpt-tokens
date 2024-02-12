@@ -246,16 +246,6 @@ export class GPTTokens {
     public readonly gpt4_turbo_previewCompletionTokenUnit = new Decimal(0.03).div(1000).toNumber()
 
     // https://openai.com/pricing/
-    // gpt-4-0125-preview
-    // Prompt: $0.01 / 1K tokens
-    public readonly gpt4_0125_previewPromptTokenUnit = new Decimal(0.01).div(1000).toNumber()
-
-    // https://openai.com/pricing/
-    // gpt-4-0125-preview
-    // Completion: $0.03 / 1K tokens
-    public readonly gpt4_0125_previewCompletionTokenUnit = new Decimal(0.03).div(1000).toNumber()
-
-    // https://openai.com/pricing/
     // Fine-tuning models gpt-3.5-turbo
     // Training: $0.008 / 1K tokens
     public readonly gpt3_5_turbo_fine_tuneTrainingTokenUnit = new Decimal(0.008).div(1000).toNumber()
@@ -296,8 +286,8 @@ export class GPTTokens {
                 .mul(this.gpt3_5_turbo_1106PromptTokenUnit).toNumber()
 
         if ([
-          'gpt-3.5-turbo',
-          'gpt-3.5-turbo-0125',
+            'gpt-3.5-turbo',
+            'gpt-3.5-turbo-0125',
         ].includes(this.model))
             return new Decimal(this.usedTokens)
                 .mul(this.gpt3_5_turbo_0125PromptTokenUnit).toNumber()
@@ -308,11 +298,11 @@ export class GPTTokens {
         ].includes(this.model)) return new Decimal(this.usedTokens)
             .mul(this.gpt4_8kPromptTokenUnit).toNumber()
 
-        if (this.model === 'gpt-4-1106-preview') return new Decimal(this.usedTokens)
+        if ([
+            'gpt-4-1106-preview',
+            'gpt-4-0125-preview',
+        ].includes(this.model)) return new Decimal(this.usedTokens)
             .mul(this.gpt4_turbo_previewPromptTokenUnit).toNumber()
-
-        if (this.model ==='gpt-4-0125-preview') return new Decimal(this.usedTokens)
-            .mul(this.gpt4_0125_previewPromptTokenUnit).toNumber()
 
         throw new Error(`Model ${this.model} is not supported`)
     }
@@ -397,20 +387,14 @@ export class GPTTokens {
             return promptUSD.add(completionUSD).toNumber()
         }
 
-        if (this.model === 'gpt-4-1106-preview') {
+        if ([
+            'gpt-4-1106-preview',
+            'gpt-4-0125-preview',
+        ].includes(this.model)) {
             const promptUSD     = new Decimal(this.promptUsedTokens)
                 .mul(this.gpt4_turbo_previewPromptTokenUnit)
             const completionUSD = new Decimal(this.completionUsedTokens)
                 .mul(this.gpt4_turbo_previewCompletionTokenUnit)
-
-            return promptUSD.add(completionUSD).toNumber()
-        }
-
-        if (this.model === 'gpt-4-0125-preview') {
-            const promptUSD     = new Decimal(this.promptUsedTokens)
-                .mul(this.gpt4_0125_previewPromptTokenUnit)
-            const completionUSD = new Decimal(this.completionUsedTokens)
-                .mul(this.gpt4_0125_previewCompletionTokenUnit)
 
             return promptUSD.add(completionUSD).toNumber()
         }
