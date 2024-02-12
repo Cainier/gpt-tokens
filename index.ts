@@ -318,7 +318,6 @@ export class GPTTokens {
 
     private basicUsedTokens () {
         if ([
-            'gpt-3.5-turbo',
             'gpt-3.5-turbo-0301',
             'gpt-3.5-turbo-0613',
             'gpt-3.5-turbo-instruct',
@@ -352,7 +351,10 @@ export class GPTTokens {
             return promptUSD.add(completionUSD).toNumber()
         }
 
-        if (this.model === 'gpt-3.5-turbo-0125') {
+        if ([
+            'gpt-3.5-turbo',
+            'gpt-3.5-turbo-0125'
+          ].includes(this.model)) {
             const promptUSD     = new Decimal(this.promptUsedTokens)
                 .mul(this.gpt3_5_turbo_0125PromptTokenUnit)
             const completionUSD = new Decimal(this.completionUsedTokens)
