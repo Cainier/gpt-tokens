@@ -29,9 +29,11 @@ export function getEncodingForModelCached (model: supportModelType): Tiktoken {
 
 export type supportModelType =
     | 'gpt-3.5-turbo'
+    | 'gpt-3.5-turbo-instruct'
     | 'gpt-3.5-turbo-0301'
     | 'gpt-3.5-turbo-0613'
     | 'gpt-3.5-turbo-1106'
+    | 'gpt-3.5-turbo-0125'
     | 'gpt-3.5-turbo-16k'
     | 'gpt-3.5-turbo-16k-0613'
     | 'gpt-4'
@@ -41,6 +43,7 @@ export type supportModelType =
     | 'gpt-4-32k-0314'
     | 'gpt-4-32k-0613'
     | 'gpt-4-1106-preview'
+    | 'gpt-4-0125-preview'
 
 interface MessageItem {
     name?: string
@@ -91,6 +94,7 @@ export class GPTTokens {
             'gpt-3.5-turbo',
             'gpt-3.5-turbo-0613',
             'gpt-3.5-turbo-1106',
+            'gpt-3.5-turbo-instruct',
             'gpt-4-0613',
         ].includes(this.model) && this.training)
             throw new Error(`Fine-tuning is not supported for model ${this.model}`)
@@ -100,9 +104,11 @@ export class GPTTokens {
             'gpt-3.5-turbo',
             'gpt-3.5-turbo-0613',
             'gpt-3.5-turbo-1106',
+            'gpt-3.5-turbo-0125',
             'gpt-4',
             'gpt-4-0613',
             'gpt-4-1106-preview',
+            'gpt-4-0125-preview',
         ].includes(this.model) && this.tools)
             throw new Error(`Function is not supported for model ${this.model}`)
 
@@ -110,7 +116,7 @@ export class GPTTokens {
             throw new Error('Function must set messages')
 
         if (this.model === 'gpt-3.5-turbo')
-            this.warning(`${this.model} may update over time. Returning num tokens assuming gpt-3.5-turbo-1106`)
+            this.warning(`${this.model} may update over time. Returning num tokens assuming gpt-3.5-turbo-0125`)
 
         if (this.model === 'gpt-4')
             this.warning(`${this.model} may update over time. Returning num tokens assuming gpt-4-0613`)
@@ -123,6 +129,7 @@ export class GPTTokens {
         if ([
             'gpt-3.5-turbo-0301',
             'gpt-3.5-turbo-0613',
+            'gpt-3.5-turbo-1106',
             'gpt-3.5-turbo-16k',
             'gpt-3.5-turbo-16k-0613',
             'gpt-4-0314',
@@ -137,6 +144,8 @@ export class GPTTokens {
         'gpt-3.5-turbo-16k',
         'gpt-3.5-turbo-16k-0613',
         'gpt-3.5-turbo-1106',
+        'gpt-3.5-turbo-0125',
+        'gpt-3.5-turbo-instruct',
         'gpt-4',
         'gpt-4-0314',
         'gpt-4-0613',
@@ -144,6 +153,7 @@ export class GPTTokens {
         'gpt-4-32k-0314',
         'gpt-4-32k-0613',
         'gpt-4-1106-preview',
+        'gpt-4-0125-preview',
     ]
 
     public readonly debug
@@ -174,6 +184,16 @@ export class GPTTokens {
     // gpt-3.5-turbo 4K context
     // $0.002 / 1K tokens
     public readonly gpt3_5_turboCompletionTokenUnit = new Decimal(0.002).div(1000).toNumber()
+
+    // https://openai.com/pricing/
+    // gpt-3.5-turbo-0125
+    // $0.0005 / 1K tokens
+    public readonly gpt3_5_turbo_0125PromptTokenUnit = new Decimal(0.0005).div(1000).toNumber()
+
+    // https://openai.com/pricing/
+    // gpt-3.5-turbo-0125
+    // $0.0015 / 1K tokens
+    public readonly gpt3_5_turbo_0125CompletionTokenUnit = new Decimal(0.0015).div(1000).toNumber()
 
     // https://openai.com/pricing/
     // gpt-3.5-turbo-16k
@@ -226,6 +246,16 @@ export class GPTTokens {
     public readonly gpt4_turbo_previewCompletionTokenUnit = new Decimal(0.03).div(1000).toNumber()
 
     // https://openai.com/pricing/
+    // gpt-4-0125-preview
+    // Prompt: $0.01 / 1K tokens
+    public readonly gpt4_0125_previewPromptTokenUnit = new Decimal(0.01).div(1000).toNumber()
+
+    // https://openai.com/pricing/
+    // gpt-4-0125-preview
+    // Completion: $0.03 / 1K tokens
+    public readonly gpt4_0125_previewCompletionTokenUnit = new Decimal(0.03).div(1000).toNumber()
+
+    // https://openai.com/pricing/
     // Fine-tuning models gpt-3.5-turbo
     // Training: $0.008 / 1K tokens
     public readonly gpt3_5_turbo_fine_tuneTrainingTokenUnit = new Decimal(0.008).div(1000).toNumber()
@@ -255,17 +285,22 @@ export class GPTTokens {
 
     private functionUsedUSD () {
         if ([
-            'gpt-3.5-turbo',
-            'gpt-3.5-turbo-0613',
+          'gpt-3.5-turbo-instruct',
+          'gpt-3.5-turbo-0613',
         ].includes(this.model))
             return new Decimal(this.usedTokens)
                 .mul(this.gpt3_5_turboPromptTokenUnit).toNumber()
 
-        if ([
-            'gpt-3.5-turbo-1106',
-        ].includes(this.model))
+        if (this.model === 'gpt-3.5-turbo-1106')
             return new Decimal(this.usedTokens)
                 .mul(this.gpt3_5_turbo_1106PromptTokenUnit).toNumber()
+
+        if ([
+          'gpt-3.5-turbo',
+          'gpt-3.5-turbo-0125',
+        ].includes(this.model))
+            return new Decimal(this.usedTokens)
+                .mul(this.gpt3_5_turbo_0125PromptTokenUnit).toNumber()
 
         if ([
             'gpt-4',
@@ -273,10 +308,11 @@ export class GPTTokens {
         ].includes(this.model)) return new Decimal(this.usedTokens)
             .mul(this.gpt4_8kPromptTokenUnit).toNumber()
 
-        if ([
-            'gpt-4-1106-preview',
-        ].includes(this.model)) return new Decimal(this.usedTokens)
+        if (this.model === 'gpt-4-1106-preview') return new Decimal(this.usedTokens)
             .mul(this.gpt4_turbo_previewPromptTokenUnit).toNumber()
+
+        if (this.model ==='gpt-4-0125-preview') return new Decimal(this.usedTokens)
+            .mul(this.gpt4_0125_previewPromptTokenUnit).toNumber()
 
         throw new Error(`Model ${this.model} is not supported`)
     }
@@ -295,6 +331,7 @@ export class GPTTokens {
             'gpt-3.5-turbo',
             'gpt-3.5-turbo-0301',
             'gpt-3.5-turbo-0613',
+            'gpt-3.5-turbo-instruct',
         ].includes(this.model)) {
             const promptUSD     = new Decimal(this.promptUsedTokens)
                 .mul(this.gpt3_5_turboPromptTokenUnit)
@@ -316,13 +353,20 @@ export class GPTTokens {
             return promptUSD.add(completionUSD).toNumber()
         }
 
-        if ([
-            'gpt-3.5-turbo-1106',
-        ].includes(this.model)) {
+        if (this.model === 'gpt-3.5-turbo-1106') {
             const promptUSD     = new Decimal(this.promptUsedTokens)
                 .mul(this.gpt3_5_turbo_1106PromptTokenUnit)
             const completionUSD = new Decimal(this.completionUsedTokens)
                 .mul(this.gpt3_5_turbo_1106CompletionTokenUnit)
+
+            return promptUSD.add(completionUSD).toNumber()
+        }
+
+        if (this.model === 'gpt-3.5-turbo-0125') {
+            const promptUSD     = new Decimal(this.promptUsedTokens)
+                .mul(this.gpt3_5_turbo_0125PromptTokenUnit)
+            const completionUSD = new Decimal(this.completionUsedTokens)
+                .mul(this.gpt3_5_turbo_0125CompletionTokenUnit)
 
             return promptUSD.add(completionUSD).toNumber()
         }
@@ -358,6 +402,15 @@ export class GPTTokens {
                 .mul(this.gpt4_turbo_previewPromptTokenUnit)
             const completionUSD = new Decimal(this.completionUsedTokens)
                 .mul(this.gpt4_turbo_previewCompletionTokenUnit)
+
+            return promptUSD.add(completionUSD).toNumber()
+        }
+
+        if (this.model === 'gpt-4-0125-preview') {
+            const promptUSD     = new Decimal(this.promptUsedTokens)
+                .mul(this.gpt4_0125_previewPromptTokenUnit)
+            const completionUSD = new Decimal(this.completionUsedTokens)
+                .mul(this.gpt4_0125_previewCompletionTokenUnit)
 
             return promptUSD.add(completionUSD).toNumber()
         }
@@ -450,8 +503,10 @@ export class GPTTokens {
 
         if ([
             'gpt-3.5-turbo',
+            'gpt-3.5-turbo-instruct',
             'gpt-3.5-turbo-0613',
             'gpt-3.5-turbo-1106',
+            'gpt-3.5-turbo-0125',
             'gpt-3.5-turbo-16k',
             'gpt-3.5-turbo-16k-0613',
             'gpt-4',
@@ -461,6 +516,7 @@ export class GPTTokens {
             'gpt-4-32k-0314',
             'gpt-4-32k-0613',
             'gpt-4-1106-preview',
+            'gpt-4-0125-preview',
         ].includes(model)) {
             tokens_per_message = 3
             tokens_per_name    = 1
