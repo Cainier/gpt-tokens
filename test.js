@@ -1,6 +1,6 @@
-const fs                           = require('fs')
-const OpenAI                       = require('openai')
-const { GPTTokens, testGPTTokens } = require('./index')
+const fs            = require('fs')
+const OpenAI        = require('openai')
+const { GPTTokens } = require('./dist/index')
 
 const [apiKey = process.env.OPENAI_API_KEY] = process.argv.slice(2)
 
@@ -11,10 +11,70 @@ if (!apiKey) {
 
 const openai = new OpenAI({ apiKey })
 
+async function testGPTTokens(prompt) {
+    const messages = [
+        { role: 'user', content: prompt },
+    ]
+
+    const supportModels = GPTTokens.supportModels
+        .filter(model => !model.startsWith('ft:'))
+
+    const { length: modelsNum } = supportModels
+
+    for (let i = 0; i < modelsNum; i += 1) {
+        const model = supportModels[i]
+
+        console.info(`[${i + 1}/${modelsNum}]: Testing ${model}...`)
+
+        let ignoreModel = false
+
+        const chatCompletion = await openai.chat.completions.create({
+            model,
+            messages,
+        })
+            .catch(err => {
+                ignoreModel = true
+
+                console.info(`Ignore model ${model}:`)
+                console.info(err.message)
+            })
+
+        const openaiUsage = chatCompletion?.usage
+
+        const gptTokens = new GPTTokens({
+            model,
+            messages: [
+                ...messages,
+                ...[chatCompletion?.choices[0].message],
+            ],
+        })
+
+        if (ignoreModel) continue
+
+        if (!openaiUsage) {
+            console.error(`Test ${model} failed (openai return usage is null)`)
+            continue
+        }
+
+        if (gptTokens.promptUsedTokens !== openaiUsage.prompt_tokens)
+            throw new Error(`Test ${model} promptUsedTokens failed (openai: ${openaiUsage.prompt_tokens}/ gpt-tokens: ${gptTokens.promptUsedTokens})`)
+
+        if (gptTokens.completionUsedTokens !== openaiUsage.completion_tokens)
+            throw new Error(`Test ${model} completionUsedTokens failed (openai: ${openaiUsage.completion_tokens}/ gpt-tokens: ${gptTokens.completionUsedTokens})`)
+
+        if (gptTokens.usedTokens !== openaiUsage?.total_tokens)
+            throw new Error(`Test ${model} usedTokens failed (openai: ${openaiUsage?.total_tokens}/ gpt-tokens: ${gptTokens.usedTokens})`)
+
+        console.info('Pass!')
+    }
+
+    console.info('Test success!')
+}
+
 async function testBasic(prompt) {
     console.info('Testing GPT...')
 
-    await testGPTTokens(openai, prompt)
+    await testGPTTokens(prompt)
 }
 
 function testTraining(filepath) {
@@ -76,7 +136,7 @@ async function testFunctionCalling() {
 
         // Example dummy function hard coded to return the same weather
         // In production, this could be your backend API or an external API
-        function getCurrentWeather(location, unit = 'fahrenheit') {
+        function getCurrentWeather(location) {
             if (location.toLowerCase().includes('tokyo')) {
                 return JSON.stringify({ location: 'Tokyo', temperature: '10', unit: 'celsius' })
             } else if (location.toLowerCase().includes('san francisco')) {
