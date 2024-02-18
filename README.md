@@ -21,6 +21,7 @@ yarn add gpt-tokens
 * gpt-3.5-turbo-0301
 * gpt-3.5-turbo-0613
 * gpt-3.5-turbo-1106
+* gpt-3.5-turbo-0125
 * gpt-3.5-turbo-16k
 * gpt-3.5-turbo-16k-0613
 * gpt-4
@@ -30,13 +31,12 @@ yarn add gpt-tokens
 * gpt-4-32k-0314  (Not tested)
 * gpt-4-32k-0613  (Not tested)
 * gpt-4-1106-preview
+* gpt-4-0125-preview
+* gpt-4-turbo-preview
 
 ### Fine Tune Models
 
 * ft:gpt-3.5-turbo:xxx
-* ft:gpt-3.5-turbo-1106:xxx
-* ft:gpt-3.5-turbo-0613:xxx
-* ft:gpt-4:xxx (Not tested)
 
 ### Others
 
