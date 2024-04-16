@@ -17,6 +17,7 @@ export class Pricing {
         'gpt-4'              : 'gpt-4-0613',
         'gpt-4-32k'          : 'gpt-4-32k-0613',
         'gpt-4-turbo-preview': 'gpt-4-0125-preview',
+        'gpt-4-turbo'        : 'gpt-4-turbo-2024-04-09',
     }
 
     /**
@@ -27,6 +28,7 @@ export class Pricing {
     public static readonly incrementalModels: {
         [model: string]: [number, number, number?]
     } = {
+        'gpt-4-turbo-2024-04-09'   : [0.01, 0.03],                  // 2024-04-09
         'gpt-4-0314'               : [0.03, 0.06],                  // 2023-03-14
         'gpt-4-32k-0314'           : [0.06, 0.12],                  // 2023-03-14
         'gpt-4-0613'               : [0.03, 0.06, 0.0080],          // 2023-06-13   (Fine-tuning experimental)
