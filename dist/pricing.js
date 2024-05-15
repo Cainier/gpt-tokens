@@ -21,6 +21,7 @@ Pricing.generalModelMapping = {
     'gpt-4-32k': 'gpt-4-32k-0613',
     'gpt-4-turbo-preview': 'gpt-4-0125-preview',
     'gpt-4-turbo': 'gpt-4-turbo-2024-04-09',
+    'gpt-4o': 'gpt-4o-2024-05-13',
 };
 /**
  * Incremental Models
@@ -28,6 +29,7 @@ Pricing.generalModelMapping = {
  * Model: [Input , Output, Train (If support)] ($/1K Tokens)
  */
 Pricing.incrementalModels = {
+    'gpt-4o-2024-05-13': [0.005, 0.015], // 2024-05-13
     'gpt-4-turbo-2024-04-09': [0.01, 0.03], // 2024-04-09
     'gpt-4-0314': [0.03, 0.06], // 2023-03-14
     'gpt-4-32k-0314': [0.06, 0.12], // 2023-03-14
