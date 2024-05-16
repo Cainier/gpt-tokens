@@ -43,6 +43,8 @@ export type supportModelType =
     | 'gpt-4-0125-preview'
     | 'gpt-4-turbo-2024-04-09'
     | 'gpt-4-turbo'
+    | 'gpt-4o'
+    | 'gpt-4o-2024-05-13'
 
 interface MessageItem {
     name?: string
