@@ -1,24 +1,23 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.GPTTokens = exports.getEncodingForModelCached = void 0;
+exports.GPTTokens = void 0;
 const js_tiktoken_1 = require("js-tiktoken");
 const openai_chat_tokens_1 = require("openai-chat-tokens");
 const tokenPrice_1 = require("./tokenPrice");
-const modelEncodingCache = {};
-function getEncodingForModelCached(model) {
-    if (!modelEncodingCache[model]) {
-        try {
-            modelEncodingCache[model] = (0, js_tiktoken_1.encodingForModel)(model);
-        }
-        catch (e) {
-            console.error('Model not found. Using cl100k_base encoding.');
-            modelEncodingCache[model] = (0, js_tiktoken_1.getEncoding)('cl100k_base');
-        }
-    }
-    return modelEncodingCache[model];
-}
-exports.getEncodingForModelCached = getEncodingForModelCached;
 class GPTTokens extends tokenPrice_1.TokenPrice {
+    static getEncodingForModelCached(model) {
+        const modelEncodingCache = GPTTokens.modelEncodingCache;
+        if (!modelEncodingCache[model]) {
+            try {
+                modelEncodingCache[model] = (0, js_tiktoken_1.encodingForModel)(model);
+            }
+            catch (e) {
+                console.error('Model not found. Using cl100k_base encoding.');
+                modelEncodingCache[model] = (0, js_tiktoken_1.getEncoding)('cl100k_base');
+            }
+        }
+        return modelEncodingCache[model];
+    }
     constructor(options) {
         super();
         const { model, fineTuneModel, messages, training, tools, debug = false, } = options;
@@ -34,7 +33,7 @@ class GPTTokens extends tokenPrice_1.TokenPrice {
         if (!GPTTokens.supportModels.includes(this.model))
             throw new Error(`Model ${this.model} is not supported`);
         if (!this.messages && !this.training && !this.tools)
-            throw new Error('Must set on of messages | training | function');
+            throw new Error('Must set one of messages | training | function');
         if (this.fineTuneModel && !this.fineTuneModel.startsWith('ft:gpt'))
             throw new Error(`Fine-tuning is not supported for ${this.fineTuneModel}`);
         if (this.training)
@@ -87,7 +86,7 @@ class GPTTokens extends tokenPrice_1.TokenPrice {
     }
     static contentUsedTokens(model, content) {
         let encoding;
-        encoding = getEncodingForModelCached(model);
+        encoding = GPTTokens.getEncodingForModelCached(model);
         return encoding.encode(content).length;
     }
     get lastMessage() {
@@ -131,7 +130,7 @@ class GPTTokens extends tokenPrice_1.TokenPrice {
             tokens_per_message = 3;
             tokens_per_name = 1;
         }
-        encoding = getEncodingForModelCached(model);
+        encoding = GPTTokens.getEncodingForModelCached(model);
         // This is a port of the Python code from
         //
         // Python => Typescript by gpt-4
@@ -155,3 +154,4 @@ class GPTTokens extends tokenPrice_1.TokenPrice {
     }
 }
 exports.GPTTokens = GPTTokens;
+GPTTokens.modelEncodingCache = {};

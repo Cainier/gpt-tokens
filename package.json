@@ -13,14 +13,15 @@
         "amount"
     ],
     "scripts": {
-        "test": "node test.js",
+        "test": "node tests/index.js",
+        "test:perf": "node tests/perf.js",
         "build": "npm i && rm -rf dist && tsc && npm run test"
     },
     "exports": {
         ".": {
-          "types": "./dist/index.d.ts",
-          "import": "./dist/index.js",
-          "require": "./dist/index.js"
+            "types": "./dist/index.d.ts",
+            "import": "./dist/index.js",
+            "require": "./dist/index.js"
         }
     },
     "main": "dist/index.js",
@@ -31,13 +32,13 @@
     "license": "MIT",
     "dependencies": {
         "decimal.js": "^10.4.3",
-        "js-tiktoken": "^1.0.10",
+        "js-tiktoken": "^1.0.12",
         "openai-chat-tokens": "^0.2.8"
     },
     "devDependencies": {
         "@types/node": "^12.20.0",
-        "typescript": "^5.0.4",
-        "openai": "^4.28.0"
+        "openai": "^4.28.0",
+        "typescript": "^5.0.4"
     },
     "files": [
         "dist"

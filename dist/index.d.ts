@@ -9,6 +9,10 @@ interface MessageItem {
 }
 export declare function getEncodingForModelCached(model: supportModelType): Tiktoken;
 export declare class GPTTokens extends TokenPrice {
+    protected static modelEncodingCache: {
+        [key in supportModelType]?: Tiktoken;
+    };
+    protected static getEncodingForModelCached(model: supportModelType): Tiktoken;
     constructor(options: {
         model?: supportModelType;
         fineTuneModel?: string;
