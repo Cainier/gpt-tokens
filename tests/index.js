@@ -1,6 +1,6 @@
 const fs            = require('fs')
 const OpenAI        = require('openai')
-const { GPTTokens } = require('./dist/index')
+const { GPTTokens } = require('../dist/index')
 
 const [apiKey = process.env.OPENAI_API_KEY] = process.argv.slice(2)
 
@@ -354,7 +354,7 @@ async function testFunctionCalling() {
 async function testFineTune() {
     console.info('Testing fine-tune...')
 
-    const model    = 'ft:gpt-3.5-turbo-1106:opensftp::8IWeqPit'
+    const model    = process.env.FINE_TUNE_MODEL || 'ft:gpt-3.5-turbo-1106:opensftp::8IWeqPit'
     const messages = [{ role: 'system', content: 'You are a helpful assistant.' }]
 
     const completion = await openai.chat.completions.create({

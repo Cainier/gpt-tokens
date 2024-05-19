@@ -12,23 +12,24 @@ interface MessageItem {
     content: string
 }
 
-const modelEncodingCache: { [key in supportModelType]?: Tiktoken } = {}
+export class GPTTokens extends TokenPrice {
+    protected static modelEncodingCache: { [key in supportModelType]?: Tiktoken } = {}
 
-export function getEncodingForModelCached (model: supportModelType): Tiktoken {
-    if (!modelEncodingCache[model]) {
-        try {
-            modelEncodingCache[model] = encodingForModel(model as Parameters<typeof encodingForModel>[0])
-        } catch (e) {
-            console.error('Model not found. Using cl100k_base encoding.')
-
-            modelEncodingCache[model] = getEncoding('cl100k_base')
+    protected static getEncodingForModelCached (model: supportModelType): Tiktoken {
+        const modelEncodingCache = GPTTokens.modelEncodingCache
+        if (!modelEncodingCache[model]) {
+            try {
+                modelEncodingCache[model] = encodingForModel(model as Parameters<typeof encodingForModel>[0])
+            } catch (e) {
+                console.error('Model not found. Using cl100k_base encoding.')
+    
+                modelEncodingCache[model] = getEncoding('cl100k_base')
+            }
         }
+    
+        return modelEncodingCache[model]!
     }
 
-    return modelEncodingCache[model]!
-}
-
-export class GPTTokens extends TokenPrice {
     constructor (options: {
         model?        : supportModelType
         fineTuneModel?: string
@@ -63,7 +64,7 @@ export class GPTTokens extends TokenPrice {
             throw new Error(`Model ${this.model} is not supported`)
 
         if (!this.messages && !this.training && !this.tools)
-            throw new Error('Must set on of messages | training | function')
+            throw new Error('Must set one of messages | training | function')
 
         if (this.fineTuneModel && !this.fineTuneModel.startsWith('ft:gpt'))
             throw new Error(`Fine-tuning is not supported for ${this.fineTuneModel}`)
@@ -146,7 +147,7 @@ export class GPTTokens extends TokenPrice {
     public static contentUsedTokens (model: supportModelType, content: string) {
         let encoding!: Tiktoken
 
-        encoding = getEncodingForModelCached(model)
+        encoding = GPTTokens.getEncodingForModelCached(model)
 
         return encoding.encode(content).length
     }
@@ -197,7 +198,7 @@ export class GPTTokens extends TokenPrice {
             tokens_per_name    = 1
         }
 
-        encoding = getEncodingForModelCached(model)
+        encoding = GPTTokens.getEncodingForModelCached(model)
 
         // This is a port of the Python code from
         //
