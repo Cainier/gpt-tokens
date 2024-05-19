@@ -2,7 +2,10 @@ const fs            = require('fs')
 const OpenAI        = require('openai')
 const { GPTTokens } = require('../dist/index')
 
-const [apiKey = process.env.OPENAI_API_KEY] = process.argv.slice(2)
+const [
+    apiKey        = process.env.OPENAI_API_KEY,
+    fineTuneModel = process.env.FINE_TUNE_MODEL,
+] = process.argv.slice(2)
 
 if (!apiKey) {
     console.error('No API key provided. Ignoring test.')
@@ -354,18 +357,17 @@ async function testFunctionCalling() {
 async function testFineTune() {
     console.info('Testing fine-tune...')
 
-    const model    = process.env.FINE_TUNE_MODEL || 'ft:gpt-3.5-turbo-1106:opensftp::8IWeqPit'
     const messages = [{ role: 'system', content: 'You are a helpful assistant.' }]
 
     const completion = await openai.chat.completions.create({
         messages,
-        model,
+        model: fineTuneModel,
     })
 
     const { usage: openaiUsage } = completion
 
     const gptTokens = new GPTTokens({
-        fineTuneModel: model,
+        fineTuneModel,
         messages,
     })
 
