@@ -1,14 +1,15 @@
+import { Tiktoken }                      from 'js-tiktoken'
 import { encodingForModel, getEncoding } from 'js-tiktoken'
 import { promptTokensEstimate }          from 'openai-chat-tokens'
 import { TokenPrice }                    from './tokenPrice'
-import type { Tiktoken }                 from 'js-tiktoken'
+import type { TiktokenModel }            from 'js-tiktoken'
 import type { supportModelType }         from './pricing'
 
 export type { supportModelType }
 
 interface MessageItem {
-    name?  : string
-    role   : 'system' | 'user' | 'assistant'
+    name?: string
+    role: 'system' | 'user' | 'assistant'
     content: string
 }
 
@@ -19,24 +20,32 @@ export class GPTTokens extends TokenPrice {
         const modelEncodingCache = GPTTokens.modelEncodingCache
         if (!modelEncodingCache[model]) {
             try {
-                modelEncodingCache[model] = encodingForModel(model as Parameters<typeof encodingForModel>[0])
+                let jsTikTokenSupportModel: TiktokenModel
+
+                if (model === 'gpt-4o-mini' || model === 'gpt-4o-mini-2024-07-18') {
+                    jsTikTokenSupportModel = 'gpt-4o'
+                } else {
+                    jsTikTokenSupportModel = model
+                }
+
+                modelEncodingCache[model] = encodingForModel(jsTikTokenSupportModel)
             } catch (e) {
                 console.error('Model not found. Using cl100k_base encoding.')
-    
+
                 modelEncodingCache[model] = getEncoding('cl100k_base')
             }
         }
-    
+
         return modelEncodingCache[model]!
     }
 
     constructor (options: {
-        model?        : supportModelType
+        model?: supportModelType
         fineTuneModel?: string
-        messages?     : GPTTokens['messages']
-        training?     : GPTTokens['training']
-        tools?        : GPTTokens['tools']
-        debug?        : boolean
+        messages?: GPTTokens['messages']
+        training?: GPTTokens['training']
+        tools?: GPTTokens['tools']
+        debug?: boolean
     }) {
         super()
 
@@ -95,16 +104,16 @@ export class GPTTokens extends TokenPrice {
     public readonly tools?: {
         type: 'function'
         function: {
-            name        : string
+            name: string
             description?: string
-            parameters  : Record<string, unknown>
+            parameters: Record<string, unknown>
         }
     } []
 
     // Used USD
     public get usedUSD () {
         if (this.training) return this.trainPrice(this.model, this.usedTokens)
-        if (this.tools)    return this.inputPrice(this.model, this.usedTokens)
+        if (this.tools) return this.inputPrice(this.model, this.usedTokens)
 
         return this.totalPrice(this.fineTuneModel
                 ? `ft:${this.model}`
@@ -184,9 +193,9 @@ export class GPTTokens extends TokenPrice {
      * @throws If the model is not supported.
      */
     private static num_tokens_from_messages (messages: MessageItem [], model: supportModelType) {
-        let encoding!          : Tiktoken
+        let encoding!: Tiktoken
         let tokens_per_message!: number
-        let tokens_per_name !  : number
+        let tokens_per_name !: number
 
         let num_tokens = 0
 

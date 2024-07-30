@@ -1,5 +1,5 @@
+import { Tiktoken } from 'js-tiktoken';
 import { TokenPrice } from './tokenPrice';
-import type { Tiktoken } from 'js-tiktoken';
 import type { supportModelType } from './pricing';
 export type { supportModelType };
 interface MessageItem {

@@ -9,7 +9,14 @@ class GPTTokens extends tokenPrice_1.TokenPrice {
         const modelEncodingCache = GPTTokens.modelEncodingCache;
         if (!modelEncodingCache[model]) {
             try {
-                modelEncodingCache[model] = (0, js_tiktoken_1.encodingForModel)(model);
+                let jsTikTokenSupportModel;
+                if (model === 'gpt-4o-mini' || model === 'gpt-4o-mini-2024-07-18') {
+                    jsTikTokenSupportModel = 'gpt-4o';
+                }
+                else {
+                    jsTikTokenSupportModel = model;
+                }
+                modelEncodingCache[model] = (0, js_tiktoken_1.encodingForModel)(jsTikTokenSupportModel);
             }
             catch (e) {
                 console.error('Model not found. Using cl100k_base encoding.');

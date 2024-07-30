@@ -3,9 +3,9 @@ const OpenAI        = require('openai')
 const { GPTTokens } = require('../dist/index')
 
 const [
-    apiKey        = process.env.OPENAI_API_KEY,
-    fineTuneModel = process.env.FINE_TUNE_MODEL,
-] = process.argv.slice(2)
+          apiKey        = process.env.OPENAI_API_KEY,
+          fineTuneModel = process.env.FINE_TUNE_MODEL,
+      ]                 = process.argv.slice(2)
 
 if (!apiKey) {
     console.error('No API key provided. Ignoring test.')
@@ -110,7 +110,6 @@ function testPerformance(messages) {
         console.time('GPTTokens')
 
         const usageInfo = new GPTTokens({
-            plus : false,
             model: 'gpt-3.5-turbo-0613',
             messages,
         })
