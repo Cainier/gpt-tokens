@@ -10,11 +10,15 @@ class GPTTokens extends tokenPrice_1.TokenPrice {
         if (!modelEncodingCache[model]) {
             try {
                 let jsTikTokenSupportModel;
-                if (model === 'gpt-4o-mini' || model === 'gpt-4o-mini-2024-07-18') {
-                    jsTikTokenSupportModel = 'gpt-4o';
-                }
-                else {
-                    jsTikTokenSupportModel = model;
+                switch (model) {
+                    // Enabled when TiktokenModel support type is not included (like gpt-4o)
+                    // case 'gpt-4o-mini':
+                    // case 'gpt-4o-mini-2024-07-18':
+                    //     jsTikTokenSupportModel = 'gpt-4o'
+                    //     break
+                    default:
+                        jsTikTokenSupportModel = model;
+                        break;
                 }
                 modelEncodingCache[model] = (0, js_tiktoken_1.encodingForModel)(jsTikTokenSupportModel);
             }

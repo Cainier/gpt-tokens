@@ -1,9 +1,8 @@
-import { Tiktoken }                      from 'js-tiktoken'
-import { encodingForModel, getEncoding } from 'js-tiktoken'
-import { promptTokensEstimate }          from 'openai-chat-tokens'
-import { TokenPrice }                    from './tokenPrice'
-import type { TiktokenModel }            from 'js-tiktoken'
-import type { supportModelType }         from './pricing'
+import type { TiktokenModel }                      from 'js-tiktoken'
+import { encodingForModel, getEncoding, Tiktoken } from 'js-tiktoken'
+import { promptTokensEstimate }                    from 'openai-chat-tokens'
+import { TokenPrice }                              from './tokenPrice'
+import type { supportModelType }                   from './pricing'
 
 export type { supportModelType }
 
@@ -22,10 +21,16 @@ export class GPTTokens extends TokenPrice {
             try {
                 let jsTikTokenSupportModel: TiktokenModel
 
-                if (model === 'gpt-4o-mini' || model === 'gpt-4o-mini-2024-07-18') {
-                    jsTikTokenSupportModel = 'gpt-4o'
-                } else {
-                    jsTikTokenSupportModel = model
+                switch (model) {
+                    // Enabled when TiktokenModel support type is not included (like gpt-4o)
+                    // case 'gpt-4o-mini':
+                    // case 'gpt-4o-mini-2024-07-18':
+                    //     jsTikTokenSupportModel = 'gpt-4o'
+                    //     break
+
+                    default:
+                        jsTikTokenSupportModel = model
+                        break
                 }
 
                 modelEncodingCache[model] = encodingForModel(jsTikTokenSupportModel)
