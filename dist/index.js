@@ -1,9 +1,10 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.GPTTokens = void 0;
+exports.GPTTokens = exports.TokenPrice = void 0;
 const js_tiktoken_1 = require("js-tiktoken");
 const openai_chat_tokens_1 = require("openai-chat-tokens");
 const tokenPrice_1 = require("./tokenPrice");
+Object.defineProperty(exports, "TokenPrice", { enumerable: true, get: function () { return tokenPrice_1.TokenPrice; } });
 class GPTTokens extends tokenPrice_1.TokenPrice {
     static getEncodingForModelCached(model) {
         const modelEncodingCache = GPTTokens.modelEncodingCache;

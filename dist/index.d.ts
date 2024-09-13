@@ -7,6 +7,7 @@ interface MessageItem {
     role: 'system' | 'user' | 'assistant';
     content: string;
 }
+export { TokenPrice };
 export declare class GPTTokens extends TokenPrice {
     protected static modelEncodingCache: {
         [key in supportModelType]?: Tiktoken;
