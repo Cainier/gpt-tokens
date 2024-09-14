@@ -12,6 +12,8 @@ interface MessageItem {
     content: string
 }
 
+export { TokenPrice }
+
 export class GPTTokens extends TokenPrice {
     protected static modelEncodingCache: { [key in supportModelType]?: Tiktoken } = {}
 
