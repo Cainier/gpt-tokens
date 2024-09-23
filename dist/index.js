@@ -13,10 +13,12 @@ class GPTTokens extends tokenPrice_1.TokenPrice {
                 let jsTikTokenSupportModel;
                 switch (model) {
                     // Enabled when TiktokenModel support type is not included (like gpt-4o)
-                    // case 'gpt-4o-mini':
-                    // case 'gpt-4o-mini-2024-07-18':
-                    //     jsTikTokenSupportModel = 'gpt-4o'
-                    //     break
+                    case 'o1-preview':
+                    case "o1-preview-2024-09-12":
+                    case "o1-mini":
+                    case "o1-mini-2024-09-12":
+                        jsTikTokenSupportModel = 'gpt-4o';
+                        break;
                     default:
                         jsTikTokenSupportModel = model;
                         break;

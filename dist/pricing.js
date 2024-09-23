@@ -1,10 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Pricing = void 0;
-// | "o1-preview"
-// | "o1-preview-2024-09-12"
-// | "o1-mini"
-// | "o1-mini-2024-09-12";
 /**
  * Pricing
  * @class
