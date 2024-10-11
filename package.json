@@ -32,7 +32,7 @@
     "license": "MIT",
     "dependencies": {
         "decimal.js": "^10.4.3",
-        "js-tiktoken": "^1.0.14",
+        "js-tiktoken": "^1.0.15",
         "openai-chat-tokens": "^0.2.8"
     },
     "devDependencies": {

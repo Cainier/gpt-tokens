@@ -44,6 +44,7 @@ yarn add gpt-tokens
 * o1-preview-2024-09-12
 * o1-mini
 * o1-mini-2024-09-12
+* chatgpt-4o-latest
 
 ### Fine Tune Models
 
