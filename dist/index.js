@@ -17,9 +17,10 @@ class GPTTokens extends tokenPrice_1.TokenPrice {
                     // case 'o1-preview-2024-09-12':
                     // case 'o1-mini':
                     // case 'o1-mini-2024-09-12':
-                    // case 'chatgpt-4o-latest':
-                    //     jsTikTokenSupportModel = 'gpt-4o'
-                    //     break
+                    case 'o1':
+                    case 'gpt-4o-2024-11-20':
+                        jsTikTokenSupportModel = 'gpt-4o';
+                        break;
                     default:
                         jsTikTokenSupportModel = model;
                         break;
