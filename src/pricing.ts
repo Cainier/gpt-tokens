@@ -29,6 +29,8 @@ export type supportModelType =
     | 'o1-mini'
     | 'o1-mini-2024-09-12'
     | 'chatgpt-4o-latest'
+    | 'o3-mini'
+    | 'o3-mini-2025-01-31'
 
 /**
  * Pricing
@@ -55,8 +57,8 @@ export class Pricing {
         'chatgpt-4o-latest'  : 'gpt-4o-2024-05-13',
         'o1-preview'         : 'o1-preview-2024-09-12',
         'o1-mini'            : 'o1-mini-2024-09-12',
+        'o3-mini'            : 'o3-mini-2025-01-31',
     }
-
     /**
      * Incremental Models
      * @public
@@ -65,9 +67,10 @@ export class Pricing {
     public static readonly incrementalModels: {
         [model: string]: [number, number, number?]
     } = {
+        'o3-mini-2025-01-31'    : [0.0011, 0.0044],              // 2025-01-31
         'o1'                    : [0.015, 0.06],                 // 2024-12-18
         'o1-preview-2024-09-12' : [0.015, 0.06],                 // 2024-09-12
-        'o1-mini-2024-09-12'    : [0.003, 0.012],                // 2024-09-12
+        'o1-mini-2024-09-12'    : [0.0011, 0.0044],              // 2024-09-12
         'gpt-4o-2024-05-13'     : [0.005, 0.015],                // 2024-05-13
         'gpt-4o-2024-08-06'     : [0.0025, 0.010],               // 2024-08-06
         'gpt-4o-2024-11-20'     : [0.0025, 0.010],               // 2024-11-20
