@@ -30,6 +30,8 @@ export class GPTTokens extends TokenPrice {
                     // case 'o1-mini':
                     // case 'o1-mini-2024-09-12':
                     case 'o1':
+                    case 'o3-mini-2025-01-31':
+                    case 'o3-mini':
                     case 'gpt-4o-2024-11-20':
                         jsTikTokenSupportModel = 'gpt-4o'
                         break
